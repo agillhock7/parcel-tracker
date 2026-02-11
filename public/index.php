@@ -177,6 +177,7 @@ $users = null;
 $auth = null;
 $oauth = null;
 $passwordResets = null;
+$tracker = null;
 if ($pdo) {
     $users = new App\Auth\UserRepository($pdo);
     $auth = new App\Auth\AuthService($users);
@@ -188,6 +189,7 @@ if ($pdo) {
         $baseUrl,
         $logDir
     );
+    $tracker = new App\Tracking\AfterShipClient((string)getenv('AFTERSHIP_API_KEY'), $logDir);
 }
 $currentUser = $auth?->user();
 $shipments = $pdo ? new App\Shipment\DbShipmentService($pdo) : null;
@@ -586,6 +588,7 @@ $router->get('/shipments/{id}', function (array $params) use (
     $metaBase,
     $authView,
     $currentUser,
+    $tracker,
     $vite
 ): void {
     $userId = requiredUserId($currentUser);
@@ -611,6 +614,7 @@ $router->get('/shipments/{id}', function (array $params) use (
         'shipment' => $s,
         'events' => $events,
         'defaultTime' => gmdate('Y-m-d\\TH:i'),
+        'tracking_live_enabled' => $tracker?->isConfigured() ?? false,
         'vite' => $vite,
         'meta' => array_merge($metaBase, [
             'description' => $description,
@@ -618,6 +622,47 @@ $router->get('/shipments/{id}', function (array $params) use (
             'image' => $brandImageUrl,
         ]),
     ]);
+});
+
+$router->post('/shipments/{id}/sync', function (array $params) use ($shipments, $tracker, $csrf, $flash, $currentUser): void {
+    $csrf->requireValidPost();
+    $userId = requiredUserId($currentUser);
+    $id = (int)($params['id'] ?? 0);
+    if ($id <= 0 || !$shipments) {
+        redirectTo('/');
+    }
+
+    if (!$tracker || !$tracker->isConfigured()) {
+        $flash->set('err', 'Live tracking is not configured. Add AFTERSHIP_API_KEY in .env.');
+        redirectTo('/shipments/' . $id);
+    }
+
+    try {
+        $shipment = $shipments->getShipment($userId, $id);
+        $sync = $tracker->fetchTracking(
+            (string)($shipment['tracking_number'] ?? ''),
+            (string)($shipment['carrier'] ?? '')
+        );
+
+        if (!($sync['ok'] ?? false)) {
+            $flash->set('err', (string)($sync['error'] ?? 'Unable to sync live tracking right now.'));
+            redirectTo('/shipments/' . $id);
+        }
+
+        $inserted = $shipments->syncExternalTracking(
+            $userId,
+            $id,
+            (string)($sync['status'] ?? 'unknown'),
+            is_array($sync['events'] ?? null) ? $sync['events'] : [],
+            isset($sync['carrier']) ? (string)$sync['carrier'] : null
+        );
+
+        $flash->set('ok', 'Live tracking synced. ' . $inserted . ' new event(s) imported.');
+        redirectTo('/shipments/' . $id);
+    } catch (Throwable $e) {
+        $flash->set('err', $e->getMessage());
+        redirectTo('/shipments/' . $id);
+    }
 });
 
 $router->post('/shipments/{id}/events', function (array $params) use ($shipments, $csrf, $flash, $currentUser): void {

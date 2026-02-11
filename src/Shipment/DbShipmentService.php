@@ -173,6 +173,115 @@ SQL;
         }
     }
 
+    /**
+     * @param list<array{event_time:string,location:?string,description:string,raw_payload?:array<string,mixed>}> $events
+     */
+    public function syncExternalTracking(
+        int $userId,
+        int $shipmentId,
+        string $status,
+        array $events,
+        ?string $carrier
+    ): int {
+        $this->assertOwnership($userId, $shipmentId);
+
+        $carrierNorm = $this->nullableTrim($carrier);
+        $statusNorm = $this->normalizeStatus($status);
+        $inserted = 0;
+        $latestEventTime = null;
+
+        $this->pdo->beginTransaction();
+        try {
+            $existsStmt = $this->pdo->prepare(
+                'SELECT id
+                 FROM tracking_events
+                 WHERE shipment_id = :shipment_id
+                   AND event_time = :event_time
+                   AND description = :description
+                   AND COALESCE(location, \'\') = :location
+                 LIMIT 1'
+            );
+            $insertStmt = $this->pdo->prepare(
+                'INSERT INTO tracking_events (shipment_id, event_time, location, description, raw_payload, created_at)
+                 VALUES (:shipment_id, :event_time, :location, :description, :raw_payload, UTC_TIMESTAMP())'
+            );
+
+            foreach ($events as $event) {
+                if (!is_array($event)) {
+                    continue;
+                }
+
+                $eventTime = $this->normalizeDatetime((string)($event['event_time'] ?? ''));
+                $location = $this->nullableTrim((string)($event['location'] ?? ''));
+                $description = trim((string)($event['description'] ?? ''));
+                if ($description === '') {
+                    continue;
+                }
+
+                $existsStmt->execute([
+                    'shipment_id' => $shipmentId,
+                    'event_time' => $eventTime,
+                    'description' => $description,
+                    'location' => $location ?? '',
+                ]);
+                if ($existsStmt->fetch()) {
+                    if ($latestEventTime === null || $eventTime > $latestEventTime) {
+                        $latestEventTime = $eventTime;
+                    }
+                    continue;
+                }
+
+                $rawPayload = null;
+                if (is_array($event['raw_payload'] ?? null)) {
+                    $encoded = json_encode($event['raw_payload'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                    if (is_string($encoded) && $encoded !== '') {
+                        $rawPayload = $encoded;
+                    }
+                }
+
+                $insertStmt->execute([
+                    'shipment_id' => $shipmentId,
+                    'event_time' => $eventTime,
+                    'location' => $location,
+                    'description' => $description,
+                    'raw_payload' => $rawPayload,
+                ]);
+                $inserted++;
+
+                if ($latestEventTime === null || $eventTime > $latestEventTime) {
+                    $latestEventTime = $eventTime;
+                }
+            }
+
+            $sql = 'UPDATE shipments
+                    SET status = :status,
+                        updated_at = UTC_TIMESTAMP()';
+            $params = [
+                'status' => $statusNorm,
+                'id' => $shipmentId,
+                'user_id' => $userId,
+            ];
+            if ($latestEventTime !== null) {
+                $sql .= ', last_event_at = :last_event_at';
+                $params['last_event_at'] = $latestEventTime;
+            }
+            if ($carrierNorm !== null) {
+                $sql .= ', carrier = :carrier';
+                $params['carrier'] = $carrierNorm;
+            }
+            $sql .= ' WHERE id = :id AND user_id = :user_id';
+
+            $upd = $this->pdo->prepare($sql);
+            $upd->execute($params);
+
+            $this->pdo->commit();
+            return $inserted;
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     private function assertOwnership(int $userId, int $shipmentId): void
     {
         $stmt = $this->pdo->prepare('SELECT id FROM shipments WHERE id = :id AND user_id = :user_id LIMIT 1');
@@ -221,4 +330,3 @@ SQL;
         return in_array($s, $allowed, true) ? $s : 'unknown';
     }
 }
-

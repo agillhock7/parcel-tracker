@@ -6,6 +6,7 @@
   $tn = (string)($shipment['tracking_number'] ?? '');
   $st = (string)($shipment['status'] ?? 'unknown');
   $archived = !empty($shipment['archived']);
+  $liveEnabled = !empty($tracking_live_enabled);
 ?>
 
 <section class="detail-head" data-tour="status">
@@ -57,6 +58,16 @@
   <article class="card card--padded">
     <h2 class="card__title">Update Shipment</h2>
     <p class="card__sub">Add a new tracking event and keep delivery status current.</p>
+
+    <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/sync" class="sync-form">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)($csrf ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+      <button class="btn btn--ghost" type="submit">Sync live tracking</button>
+      <?php if ($liveEnabled): ?>
+        <span class="sync-form__hint">Uses live carrier data (AfterShip)</span>
+      <?php else: ?>
+        <span class="sync-form__hint sync-form__hint--warn">Set `AFTERSHIP_API_KEY` in `.env` to enable live sync.</span>
+      <?php endif; ?>
+    </form>
 
     <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/events" class="form">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)($csrf ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">

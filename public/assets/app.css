@@ -500,6 +500,21 @@ textarea.in { min-height: 92px; resize: vertical; }
   text-decoration: underline;
   text-decoration-color: rgba(243, 175, 104, 0.6);
 }
+.sync-form {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sync-form__hint {
+  color: #667089;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sync-form__hint--warn {
+  color: #995249;
+}
 .oauth {
   border-top: 1px solid var(--line);
   margin-top: 16px;
