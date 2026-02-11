@@ -15,6 +15,15 @@ Options -Indexes
   RewriteRule ^ index.php [L]
 </IfModule>
 
+<IfModule mod_headers.c>
+  <Files "sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </Files>
+  <Files "site.webmanifest">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </Files>
+</IfModule>
+
 <IfModule mod_authz_core.c>
   <FilesMatch "^\.">
     Require all denied

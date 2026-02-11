@@ -859,6 +859,58 @@ textarea.in { min-height: 92px; resize: vertical; }
   box-shadow: 0 0 0 4px rgba(243, 175, 104, 0.56), 0 0 0 10px rgba(243, 175, 104, 0.2);
 }
 
+.pwa-ui[hidden],
+.pwa-update[hidden] {
+  display: none;
+}
+.pwa-ui {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1500;
+}
+.pwa-install {
+  border: 1px solid #f3d3ad;
+  background: linear-gradient(145deg, #fef0df, #ffe7cc);
+  color: #8a5825;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px 14px;
+  box-shadow: 0 12px 28px rgba(14, 22, 36, 0.2);
+  cursor: pointer;
+}
+.pwa-update {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 1600;
+  border: 1px solid #dce5f4;
+  background: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 14px 30px rgba(17, 24, 39, 0.2);
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.pwa-update__text {
+  color: #4f5b72;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pwa-update__btn {
+  border: 1px solid #f3d3ad;
+  background: #fef0df;
+  color: #8a5825;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
 [data-reveal] {
   opacity: 0;
   transform: translateY(14px);
@@ -969,6 +1021,19 @@ textarea.in { min-height: 92px; resize: vertical; }
   }
   .auth-brand__name {
     font-size: 23px;
+  }
+  .pwa-ui {
+    right: 12px;
+    bottom: 12px;
+  }
+  .pwa-install {
+    width: calc(100vw - 24px);
+    max-width: 240px;
+  }
+  .pwa-update {
+    width: calc(100vw - 24px);
+    justify-content: space-between;
+    border-radius: 14px;
   }
 }
 

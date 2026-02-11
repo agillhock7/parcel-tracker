@@ -1,13 +1,28 @@
 {
+  "id": "/",
   "name": "Parcel Tracker",
   "short_name": "Parcel Tracker",
   "description": "Track deliveries, monitor shipment timelines, and manage parcel updates.",
   "start_url": "/",
   "scope": "/",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#f6f7fb",
   "theme_color": "#f6f7fb",
+  "categories": ["productivity", "utilities", "business"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/"
+    },
+    {
+      "name": "Add Shipment",
+      "short_name": "Add",
+      "url": "/#add"
+    }
+  ],
   "icons": [
     {
       "src": "/assets/branding/parceltracker-logo-1024.png",

@@ -16,6 +16,79 @@ const AppEnhancer = {
       const nav = q("[data-nav]");
       navBtn?.addEventListener("click", () => nav?.classList.toggle("is-open"));
 
+      let deferredInstallPrompt = null;
+      const pwaUi = document.getElementById("pwa-ui");
+      const pwaInstallBtn = document.getElementById("pwa-install");
+      const pwaUpdate = document.getElementById("pwa-update");
+      const pwaUpdateBtn = document.getElementById("pwa-update-btn");
+      let swReg = null;
+
+      if ("serviceWorker" in navigator) {
+        const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        const canRegister = window.location.protocol === "https:" || isLocalHost;
+        if (canRegister) {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => {
+              swReg = reg;
+
+              const showUpdate = () => {
+                if (!pwaUpdate) return;
+                pwaUpdate.hidden = false;
+              };
+
+              if (reg.waiting) showUpdate();
+              reg.addEventListener("updatefound", () => {
+                const worker = reg.installing;
+                if (!worker) return;
+                worker.addEventListener("statechange", () => {
+                  if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                    showUpdate();
+                  }
+                });
+              });
+            })
+            .catch(() => {
+              // no-op
+            });
+
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+        }
+      }
+
+      pwaUpdateBtn?.addEventListener("click", () => {
+        if (!swReg || !swReg.waiting) return;
+        swReg.waiting.postMessage({ type: "SKIP_WAITING" });
+      });
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        if (pwaUi) pwaUi.hidden = false;
+      });
+
+      pwaInstallBtn?.addEventListener("click", async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        try {
+          await deferredInstallPrompt.userChoice;
+        } catch (_) {
+          // ignore
+        }
+        deferredInstallPrompt = null;
+        if (pwaUi) pwaUi.hidden = true;
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        if (pwaUi) pwaUi.hidden = true;
+      });
+
       qAll("[data-ai-sync-form]").forEach((form) => {
         form.addEventListener("submit", (ev) => {
           if (form.dataset.submitting === "1") {

@@ -190,6 +190,14 @@
 
     <div id="vue-enhancer" hidden data-page="<?= $e($page) ?>"></div>
 
+    <div class="pwa-ui" id="pwa-ui" hidden>
+      <button type="button" class="pwa-install" id="pwa-install">Install App</button>
+    </div>
+    <div class="pwa-update" id="pwa-update" hidden>
+      <span class="pwa-update__text">A new version is ready.</span>
+      <button type="button" class="pwa-update__btn" id="pwa-update-btn">Update</button>
+    </div>
+
     <?php if (!empty($vite['js'])): ?>
       <?php foreach (($vite['js'] ?? []) as $js): ?>
         <script type="module" src="<?= $e((string)$js) ?>"></script>
