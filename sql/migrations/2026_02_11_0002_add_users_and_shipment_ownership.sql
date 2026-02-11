@@ -13,8 +13,22 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uniq_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE shipments
-  ADD COLUMN IF NOT EXISTS user_id BIGINT UNSIGNED NULL AFTER id;
+-- Add user_id column if missing (compatible with servers that don't support ADD COLUMN IF NOT EXISTS).
+SET @col_user_exists := (
+  SELECT COUNT(1)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'shipments'
+    AND column_name = 'user_id'
+);
+SET @sql_add_user_col := IF(
+  @col_user_exists = 0,
+  'ALTER TABLE shipments ADD COLUMN user_id BIGINT UNSIGNED NULL AFTER id',
+  'SELECT 1'
+);
+PREPARE stmt_add_user_col FROM @sql_add_user_col;
+EXECUTE stmt_add_user_col;
+DEALLOCATE PREPARE stmt_add_user_col;
 
 -- Ensure index exists for ownership lookups.
 SET @idx_user_exists := (
