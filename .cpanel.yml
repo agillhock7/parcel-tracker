@@ -1,0 +1,6 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ajgill/public_html/tb4/
+    - /bin/mkdir -p "$DEPLOYPATH"
+    # Deploy only the web root. Keep app code outside public/.
+    - /bin/bash -lc 'if [ ! -d public ]; then echo "Missing public/"; exit 1; fi; cp -a public/. "$DEPLOYPATH"'
