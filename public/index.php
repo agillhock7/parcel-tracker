@@ -163,6 +163,8 @@ $siteName = 'Parcel Tracker';
 $brandImage = '/assets/branding/parceltracker-logo-1024.png';
 $brandImageUrl = absoluteUrl($brandImage, $baseUrl);
 $vite = App\Infrastructure\Vite::assets($appRoot, 'frontend/src/main.js');
+$appVersion = App\Infrastructure\AppVersion::resolve($appRoot, $vite);
+header('X-App-Version: ' . $appVersion);
 
 $pdo = null;
 $dbError = null;
