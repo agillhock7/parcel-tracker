@@ -530,10 +530,18 @@ textarea.in { min-height: 92px; resize: vertical; }
   margin: 0 auto;
   padding: 12px 16px 20px;
   text-align: center;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
 }
 .foot__muted {
   color: #808798;
   font-size: 12px;
+}
+.foot__muted a {
+  color: #59627a;
+  text-decoration: underline;
+  text-decoration-color: rgba(89, 98, 122, 0.35);
 }
 
 .tour[hidden] { display: none; }

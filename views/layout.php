@@ -27,6 +27,22 @@
   $avatarInitial = strtoupper(substr($userName !== '' ? $userName : ($userEmail !== '' ? $userEmail : 'U'), 0, 1));
 
   $page = (string)($page ?? 'home');
+  $appVersion = trim((string)getenv('APP_VERSION'));
+  if ($appVersion === '') {
+    $firstJs = (string)($vite['js'][0] ?? '');
+    if ($firstJs !== '' && preg_match('/-([A-Za-z0-9_-]{6,})\\.js$/', $firstJs, $m) === 1) {
+      $appVersion = 'build-' . substr((string)$m[1], 0, 8);
+    }
+  }
+  if ($appVersion === '') {
+    $fallbackAsset = dirname(__DIR__) . '/public/assets/app.css';
+    if (is_file($fallbackAsset)) {
+      $mtime = (int)filemtime($fallbackAsset);
+      $appVersion = 'local-' . gmdate('YmdHi', $mtime > 0 ? $mtime : time());
+    } else {
+      $appVersion = 'dev';
+    }
+  }
 
   $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -149,6 +165,11 @@
         <span class="foot__muted">
           Design influenced by Mr. Pablo Benito:
           <a href="https://pbenitol.wixsite.com/portfolio/parceltracker" rel="noopener" target="_blank">portfolio</a>
+        </span>
+        <span class="foot__muted">
+          Version <span class="code"><?= $e($appVersion) ?></span> ·
+          Developed with
+          <a href="https://darkhorsevirtue.io" rel="noopener" target="_blank">Dark Horse Virtue</a>
         </span>
       </footer>
     </div>
