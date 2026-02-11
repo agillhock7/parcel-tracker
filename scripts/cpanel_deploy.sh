@@ -74,4 +74,13 @@ done
 echo "[deploy] ensuring storage/"
 /bin/mkdir -p "$DEPLOYPATH/storage/logs"
 
+commit_sha="$(git rev-parse --short=8 HEAD 2>/dev/null || true)"
+if [[ -n "$commit_sha" ]]; then
+  app_version="p-$commit_sha"
+else
+  app_version="p-$(date -u +%Y%m%d%H%M)"
+fi
+echo "$app_version" > "$DEPLOYPATH/storage/version.txt"
+echo "[deploy] version=$app_version"
+
 echo "[deploy] done"

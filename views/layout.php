@@ -29,6 +29,15 @@
   $page = (string)($page ?? 'home');
   $appVersion = trim((string)getenv('APP_VERSION'));
   if ($appVersion === '') {
+    $deployVersionFile = dirname(__DIR__) . '/storage/version.txt';
+    if (is_file($deployVersionFile)) {
+      $fileVersion = trim((string)file_get_contents($deployVersionFile));
+      if ($fileVersion !== '') {
+        $appVersion = $fileVersion;
+      }
+    }
+  }
+  if ($appVersion === '') {
     $firstJs = (string)($vite['js'][0] ?? '');
     if ($firstJs !== '' && preg_match('/-([A-Za-z0-9_-]{6,})\\.js$/', $firstJs, $m) === 1) {
       $appVersion = 'build-' . substr((string)$m[1], 0, 8);
