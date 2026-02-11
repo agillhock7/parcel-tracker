@@ -34,6 +34,11 @@ final class AfterShipClient
         return $this->apiKey !== '';
     }
 
+    public function providerName(): string
+    {
+        return 'aftership';
+    }
+
     /**
      * @return array{
      *   ok:bool,

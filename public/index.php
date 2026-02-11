@@ -178,6 +178,7 @@ $auth = null;
 $oauth = null;
 $passwordResets = null;
 $tracker = null;
+$trackerProviderName = '';
 if ($pdo) {
     $users = new App\Auth\UserRepository($pdo);
     $auth = new App\Auth\AuthService($users);
@@ -189,7 +190,26 @@ if ($pdo) {
         $baseUrl,
         $logDir
     );
-    $tracker = new App\Tracking\AfterShipClient((string)getenv('AFTERSHIP_API_KEY'), $logDir);
+
+    $trackingProvider = strtolower(trim((string)getenv('TRACKING_PROVIDER')));
+    $ship24Key = trim((string)getenv('SHIP24_API_KEY'));
+    $afterShipKey = trim((string)getenv('AFTERSHIP_API_KEY'));
+    if ($trackingProvider === '') {
+        if ($ship24Key !== '') {
+            $trackingProvider = 'ship24';
+        } elseif ($afterShipKey !== '') {
+            $trackingProvider = 'aftership';
+        }
+    }
+
+    if ($trackingProvider === 'ship24') {
+        $tracker = new App\Tracking\Ship24Client($ship24Key, $logDir);
+    } elseif ($trackingProvider === 'aftership') {
+        $tracker = new App\Tracking\AfterShipClient($afterShipKey, $logDir);
+    }
+}
+if ($tracker && method_exists($tracker, 'providerName')) {
+    $trackerProviderName = (string)$tracker->providerName();
 }
 $currentUser = $auth?->user();
 $shipments = $pdo ? new App\Shipment\DbShipmentService($pdo) : null;
@@ -589,6 +609,7 @@ $router->get('/shipments/{id}', function (array $params) use (
     $authView,
     $currentUser,
     $tracker,
+    $trackerProviderName,
     $vite
 ): void {
     $userId = requiredUserId($currentUser);
@@ -615,6 +636,7 @@ $router->get('/shipments/{id}', function (array $params) use (
         'events' => $events,
         'defaultTime' => gmdate('Y-m-d\\TH:i'),
         'tracking_live_enabled' => $tracker?->isConfigured() ?? false,
+        'tracking_provider' => $trackerProviderName,
         'vite' => $vite,
         'meta' => array_merge($metaBase, [
             'description' => $description,
@@ -633,7 +655,7 @@ $router->post('/shipments/{id}/sync', function (array $params) use ($shipments, 
     }
 
     if (!$tracker || !$tracker->isConfigured()) {
-        $flash->set('err', 'Live tracking is not configured. Add AFTERSHIP_API_KEY in .env.');
+        $flash->set('err', 'Live tracking is not configured. Add SHIP24_API_KEY in .env.');
         redirectTo('/shipments/' . $id);
     }
 
