@@ -16,6 +16,32 @@ const AppEnhancer = {
       const nav = q("[data-nav]");
       navBtn?.addEventListener("click", () => nav?.classList.toggle("is-open"));
 
+      qAll("[data-ai-sync-form]").forEach((form) => {
+        form.addEventListener("submit", (ev) => {
+          if (form.dataset.submitting === "1") {
+            ev.preventDefault();
+            return;
+          }
+          form.dataset.submitting = "1";
+
+          const btn = form.querySelector("[data-ai-sync-btn]");
+          if (btn instanceof HTMLButtonElement) {
+            btn.disabled = true;
+            btn.classList.add("is-loading");
+          }
+
+          const visual = form.parentElement?.querySelector("[data-ai-sync-visual]");
+          if (visual instanceof HTMLElement) {
+            visual.hidden = false;
+            requestAnimationFrame(() => visual.classList.add("is-active"));
+          }
+
+          // Keep a short delay so users can perceive the action feedback.
+          ev.preventDefault();
+          window.setTimeout(() => form.submit(), 320);
+        });
+      });
+
       const revealEls = qAll("[data-reveal]");
       if (revealEls.length) {
         if ("IntersectionObserver" in window) {

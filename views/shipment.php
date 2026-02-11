@@ -81,13 +81,23 @@
     <h2 class="card__title">Update Shipment</h2>
     <p class="card__sub">Add a new tracking event and keep delivery status current.</p>
 
-    <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/sync" class="sync-form">
+    <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/sync" class="sync-form" data-ai-sync-form>
       <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)($csrf ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-      <button class="btn btn--ghost" type="submit">Check Tracking with AI</button>
+      <button class="btn btn--ghost sync-form__btn" type="submit" data-ai-sync-btn>
+        <span class="sync-form__label">Check Tracking with AI</span>
+        <span class="sync-form__busy" aria-hidden="true"></span>
+      </button>
       <?php if (!$liveEnabled): ?>
         <span class="sync-form__hint sync-form__hint--warn">Set `<?= htmlspecialchars($trackingConfigHint, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>` in `.env` to enable live sync.</span>
       <?php endif; ?>
     </form>
+    <div class="sync-visual" data-ai-sync-visual hidden aria-live="polite" aria-label="Checking tracking with AI">
+      <p class="sync-visual__text">AI is checking the latest carrier scan...</p>
+      <div class="sync-visual__lane">
+        <img src="/assets/graphics/truck.svg" alt="" class="sync-visual__truck" aria-hidden="true">
+        <div class="sync-visual__track"></div>
+      </div>
+    </div>
 
     <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/events" class="form">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)($csrf ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
