@@ -45,9 +45,29 @@ function redirectTo(string $path): void
     exit;
 }
 
-function h(string $s): string
+function appBaseUrl(): string
 {
-    return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $env = trim((string)getenv('APP_URL'));
+    if ($env !== '') {
+        return rtrim($env, '/');
+    }
+
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((string)($_SERVER['SERVER_PORT'] ?? '') === '443');
+    $scheme = $https ? 'https' : 'http';
+    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return $scheme . '://' . $host;
+}
+
+function absoluteUrl(string $path, string $baseUrl): string
+{
+    if ($path === '') {
+        return $baseUrl;
+    }
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        return $path;
+    }
+    return rtrim($baseUrl, '/') . '/' . ltrim($path, '/');
 }
 
 $csrf = new App\Http\Csrf();
@@ -55,9 +75,13 @@ $flash = new App\Http\Flash();
 $tpl = new App\Http\Template($appRoot . '/views');
 $db = new App\Infrastructure\JsonDb($appRoot . '/storage/db.json');
 $shipments = new App\Shipment\ShipmentService($db);
+$baseUrl = appBaseUrl();
+$siteName = 'Parcel Tracker';
+$brandImage = '/assets/branding/parceltracker-logo-1024.png';
+$brandImageUrl = absoluteUrl($brandImage, $baseUrl);
 
 $router = new App\Http\Router();
-$router->get('/', function () use ($tpl, $shipments, $csrf, $flash): void {
+$router->get('/', function () use ($tpl, $shipments, $csrf, $flash, $baseUrl, $siteName, $brandImageUrl): void {
     $all = $shipments->listShipments(true);
     $upcoming = array_values(array_filter($all, function (array $s): bool {
         $st = (string)($s['status'] ?? 'unknown');
@@ -70,8 +94,9 @@ $router->get('/', function () use ($tpl, $shipments, $csrf, $flash): void {
         return $archived || $st === 'delivered';
     }));
 
+    $description = 'Track deliveries, update shipment timelines, and monitor parcel status in one clean dashboard.';
     $tpl->render('home', [
-        'title' => 'Parcel Tracker',
+        'title' => $siteName,
         'csrf' => $csrf->token(),
         'flash' => $flash->consume(),
         'upcoming' => $upcoming,
@@ -79,6 +104,18 @@ $router->get('/', function () use ($tpl, $shipments, $csrf, $flash): void {
         'counts' => [
             'upcoming' => count($upcoming),
             'past' => count($past),
+        ],
+        'meta' => [
+            'site_name' => $siteName,
+            'description' => $description,
+            'url' => absoluteUrl('/', $baseUrl),
+            'type' => 'website',
+            'image' => $brandImageUrl,
+            'image_alt' => 'Parcel Tracker logo',
+            'image_width' => '1024',
+            'image_height' => '1024',
+            'theme_color' => '#f6f7fb',
+            'site_url' => $baseUrl,
         ],
     ]);
 });
@@ -99,17 +136,34 @@ $router->post('/shipments', function () use ($shipments, $csrf, $flash): void {
     }
 });
 
-$router->get('/shipments/{id}', function (array $params) use ($tpl, $shipments, $csrf, $flash): void {
+$router->get('/shipments/{id}', function (array $params) use ($tpl, $shipments, $csrf, $flash, $baseUrl, $siteName, $brandImageUrl): void {
     $id = (string)($params['id'] ?? '');
     $s = $shipments->getShipment($id);
     $events = $shipments->getEvents($id);
+    $label = trim((string)($s['label'] ?? ''));
+    $tracking = (string)($s['tracking_number'] ?? '');
+    $status = (string)($s['status'] ?? 'unknown');
+    $name = $label !== '' ? $label : $tracking;
+    $description = 'Shipment ' . $name . ' is currently ' . $status . '. View latest timeline updates and tracking events.';
     $tpl->render('shipment', [
-        'title' => 'Shipment',
+        'title' => $name . ' | ' . $siteName,
         'csrf' => $csrf->token(),
         'flash' => $flash->consume(),
         'shipment' => $s,
         'events' => $events,
         'defaultTime' => gmdate('Y-m-d\\TH:i'),
+        'meta' => [
+            'site_name' => $siteName,
+            'description' => $description,
+            'url' => absoluteUrl('/shipments/' . rawurlencode($id), $baseUrl),
+            'type' => 'website',
+            'image' => $brandImageUrl,
+            'image_alt' => 'Parcel Tracker logo',
+            'image_width' => '1024',
+            'image_height' => '1024',
+            'theme_color' => '#f6f7fb',
+            'site_url' => $baseUrl,
+        ],
     ]);
 });
 

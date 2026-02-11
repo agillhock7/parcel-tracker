@@ -5,7 +5,9 @@
     <p class="topbar__kicker">Welcome back</p>
     <h1 class="topbar__title">My packages</h1>
   </div>
-  <div class="topbar__badge" aria-hidden="true">PT</div>
+  <div class="topbar__badge">
+    <img class="topbar__logo" src="/assets/branding/parceltracker-logo-1024.png" alt="Parcel Tracker">
+  </div>
 </header>
 
 <div class="tabs" role="navigation" aria-label="Shortcuts">

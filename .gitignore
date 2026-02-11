@@ -35,3 +35,9 @@ data/*.db
 
 # Local-only docs
 AGENTS.private.md
+
+# Windows ADS sidecars
+*:Zone.Identifier
+
+# Local design dropzone (deployed assets should live in public/assets/)
+/assets/

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+  <msapplication>
+    <tile>
+      <square310x310logo src="/assets/branding/parceltracker-logo-1024.png"/>
+      <TileColor>#f6f7fb</TileColor>
+    </tile>
+  </msapplication>
+</browserconfig>
