@@ -5,6 +5,11 @@
 ?>
 
 <section class="auth-wrap">
+  <header class="auth-brand" aria-label="Parcel Tracker branding">
+    <img src="/assets/branding/parceltracker-logo-1024.png" alt="Parcel Tracker" class="auth-brand__logo">
+    <p class="auth-brand__name">Parcel Tracker</p>
+  </header>
+
   <article class="card card--padded auth-card">
     <h1 class="card__title">Sign in</h1>
     <p class="card__sub">Access your secure shipment dashboard.</p>

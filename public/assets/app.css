@@ -440,6 +440,27 @@ textarea.in { min-height: 92px; resize: vertical; }
   min-height: calc(100vh - 220px);
   display: grid;
   place-items: center;
+  gap: 14px;
+}
+.auth-brand {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+}
+.auth-brand__logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  object-fit: cover;
+  border: 1px solid rgba(243, 175, 104, 0.5);
+  box-shadow: 0 10px 26px rgba(16, 22, 32, 0.13);
+}
+.auth-brand__name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #2f384c;
 }
 .auth-card {
   width: min(100%, 460px);
