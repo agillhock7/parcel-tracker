@@ -1,0 +1,22 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Block direct access to app/code/config folders if deployed under the web root.
+  RewriteRule ^(src|views|config|sql|storage|data)/ - [F,L]
+
+  # Block common secret/config files.
+  RewriteRule ^(\.env|\.cpanel\.yml|composer\.(json|lock)|package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock)$ - [F,L]
+
+  # Front controller routing.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "^\.">
+    Require all denied
+  </FilesMatch>
+</IfModule>
