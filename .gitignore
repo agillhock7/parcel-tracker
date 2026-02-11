@@ -8,6 +8,8 @@ pnpm-debug.log*
 # Build output
 dist/
 build/
+!public/build/
+!public/build/**
 .next/
 .nuxt/
 out/

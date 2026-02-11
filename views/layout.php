@@ -1,6 +1,9 @@
 <?php declare(strict_types=1); ?>
 <?php
   $meta = is_array($meta ?? null) ? $meta : [];
+  $auth = is_array($auth ?? null) ? $auth : ['is_authenticated' => false, 'user' => null];
+  $vite = is_array($vite ?? null) ? $vite : ['js' => [], 'css' => []];
+
   $siteName = (string)($meta['site_name'] ?? 'Parcel Tracker');
   $pageTitle = (string)($title ?? $siteName);
   $description = (string)($meta['description'] ?? 'Track packages, monitor delivery timelines, and manage shipments in one place.');
@@ -10,9 +13,17 @@
   $imageAlt = (string)($meta['image_alt'] ?? 'Parcel Tracker logo');
   $imageWidth = (string)($meta['image_width'] ?? '1024');
   $imageHeight = (string)($meta['image_height'] ?? '1024');
-  $themeColor = (string)($meta['theme_color'] ?? '#f6f7fb');
+  $themeColor = (string)($meta['theme_color'] ?? '#f2f3f7');
   $siteUrl = (string)($meta['site_url'] ?? '');
   $host = (string)(parse_url($url, PHP_URL_HOST) ?? '');
+
+  $isAuth = (bool)($auth['is_authenticated'] ?? false);
+  $user = is_array($auth['user'] ?? null) ? $auth['user'] : null;
+  $userName = trim((string)($user['name'] ?? ''));
+  $userEmail = trim((string)($user['email'] ?? ''));
+  $avatarInitial = strtoupper(substr($userName !== '' ? $userName : ($userEmail !== '' ? $userEmail : 'U'), 0, 1));
+
+  $page = (string)($page ?? 'home');
 
   $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -84,41 +95,48 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/app.css">
+    <?php foreach (($vite['css'] ?? []) as $css): ?>
+      <link rel="stylesheet" href="<?= $e((string)$css) ?>">
+    <?php endforeach; ?>
   </head>
   <body>
-    <div class="scene" aria-hidden="true">
-      <span class="blob blob--a"></span>
-      <span class="blob blob--b"></span>
-    </div>
+    <div class="app-shell" id="app-shell" data-page="<?= $e($page) ?>" data-auth="<?= $isAuth ? '1' : '0' ?>">
+      <header class="site-top">
+        <div class="site-top__inner">
+          <a class="brand" href="/">
+            <img src="/assets/branding/parceltracker-logo-1024.png" alt="Parcel Tracker" class="brand__img">
+            <span class="brand__text"><?= $e($siteName) ?></span>
+          </a>
 
-    <main class="wrap">
-      <section class="phone" data-tour-root>
-        <div class="phone__notch" aria-hidden="true"></div>
-        <div class="phone__content">
-          <?= $content ?? '' ?>
+          <?php if ($isAuth): ?>
+            <button type="button" class="nav-toggle" data-nav-toggle aria-label="Toggle menu">☰</button>
+            <nav class="site-nav" data-nav>
+              <a href="/" class="site-nav__link<?= $page === 'home' ? ' is-active' : '' ?>">Dashboard</a>
+              <a href="/#add" class="site-nav__link">Add Shipment</a>
+            </nav>
+            <div class="site-actions">
+              <div class="avatar" title="<?= $e($userName !== '' ? $userName : $userEmail) ?>">
+                <?= $e($avatarInitial) ?>
+              </div>
+              <form method="post" action="/logout" class="logout-form">
+                <input type="hidden" name="csrf" value="<?= $e((string)($csrf ?? '')) ?>">
+                <button class="btn btn--ghost" type="submit">Sign out</button>
+              </form>
+            </div>
+          <?php else: ?>
+            <div class="site-actions">
+              <a href="/login" class="btn btn--ghost<?= $page === 'login' ? ' is-active' : '' ?>">Sign in</a>
+              <a href="/signup" class="btn<?= $page === 'signup' ? ' is-active' : '' ?>">Create account</a>
+            </div>
+          <?php endif; ?>
         </div>
+      </header>
 
-        <nav class="bottomnav" aria-label="Primary" data-tour="nav">
-          <a class="bottomnav__item<?= (($page ?? '') === 'home') ? ' is-active' : '' ?>" href="/">
-            <span class="bottomnav__ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
-            </span>
-            <span class="bottomnav__lbl">Home</span>
-          </a>
-          <a class="bottomnav__item is-add" href="/#add" data-tour="add-shortcut">
-            <span class="bottomnav__plus" aria-hidden="true">+</span>
-            <span class="bottomnav__lbl">Add</span>
-          </a>
-          <a class="bottomnav__item" href="/health">
-            <span class="bottomnav__ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-3.5 4.3-5 8-5s6.5 1.5 8 5"/></svg>
-            </span>
-            <span class="bottomnav__lbl">Health</span>
-          </a>
-        </nav>
-      </section>
+      <main class="page-wrap">
+        <?= $content ?? '' ?>
+      </main>
 
       <footer class="foot">
         <span class="foot__muted">
@@ -126,7 +144,7 @@
           <a href="https://pbenitol.wixsite.com/portfolio/parceltracker" rel="noopener" target="_blank">portfolio</a>
         </span>
       </footer>
-    </main>
+    </div>
 
     <div id="tour" class="tour" hidden aria-live="polite">
       <div class="tour__backdrop" data-tour-close></div>
@@ -142,6 +160,14 @@
       </div>
     </div>
 
-    <script defer src="/assets/app.js"></script>
+    <div id="vue-enhancer" hidden data-page="<?= $e($page) ?>"></div>
+
+    <?php if (!empty($vite['js'])): ?>
+      <?php foreach (($vite['js'] ?? []) as $js): ?>
+        <script type="module" src="<?= $e((string)$js) ?>"></script>
+      <?php endforeach; ?>
+    <?php else: ?>
+      <script defer src="/assets/app.js"></script>
+    <?php endif; ?>
   </body>
 </html>

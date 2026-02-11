@@ -1,105 +1,91 @@
 (() => {
-  const TOUR_KEY = "pt_onboarding_seen_v2";
-  const root = document.querySelector("[data-tour-root]");
+  const TOUR_KEY = "pt_onboarding_seen_v3";
+  const root = document.getElementById("app-shell");
   const tour = document.getElementById("tour");
-
   if (!root || !tour) return;
 
-  const byId = (id) => document.getElementById(id);
-  const q = (s) => root.querySelector(s);
-  const qAll = (s) => Array.from(root.querySelectorAll(s));
+  const q = (s) => document.querySelector(s);
+  const qAll = (s) => Array.from(document.querySelectorAll(s));
 
-  const stepEl = byId("tour-step");
-  const titleEl = byId("tour-title");
-  const textEl = byId("tour-text");
-  const nextBtn = byId("tour-next");
-  const prevBtn = byId("tour-prev");
-  const skipBtn = byId("tour-skip");
-  const closeHit = tour.querySelector("[data-tour-close]");
+  const navBtn = q("[data-nav-toggle]");
+  const nav = q("[data-nav]");
+  navBtn?.addEventListener("click", () => nav?.classList.toggle("is-open"));
 
-  const hasHome = !!q('[data-tour="upcoming"]');
-  const hasShipment = !!q('[data-tour="timeline"]');
+  const steps = [];
+  if (q('[data-tour="welcome"]')) {
+    steps.push(
+      { target: '[data-tour="welcome"]', title: 'Welcome', text: 'This is your dashboard with active and past shipments.' },
+      { target: '[data-tour="add-form"]', title: 'Add shipment', text: 'Create a shipment with a tracking number and optional carrier details.' },
+      { target: '[data-tour="upcoming"]', title: 'Track progress', text: 'Open any shipment card to review and update its timeline.' }
+    );
+  }
+  if (q('[data-tour="timeline"]')) {
+    steps.push(
+      { target: '[data-tour="timeline"]', title: 'Timeline', text: 'Shipment events are shown from newest to oldest for quick review.' }
+    );
+  }
 
-  const defs = hasHome
-    ? [
-        { target: '[data-tour="welcome"]', title: "Welcome", text: "This is your parcel dashboard with current package activity." },
-        { target: '[data-tour="tabs"]', title: "Quick sections", text: "Use these shortcuts to jump between package actions quickly." },
-        { target: '[data-tour="upcoming"]', title: "Upcoming deliveries", text: "Track active packages and open each card for full timeline details." },
-        { target: '[data-tour="add-form"]', title: "Add package", text: "Create a new shipment with tracking number, optional label, and carrier." },
-        { target: '[data-tour="nav"]', title: "Bottom nav", text: "The bottom bar is optimized for mobile-style one-thumb navigation." },
-      ]
-    : hasShipment
-      ? [
-          { target: '[data-tour="status"]', title: "Shipment status", text: "The hero section highlights current delivery state at a glance." },
-          { target: '[data-tour="timeline"]', title: "Tracking timeline", text: "Every status update is stored in chronological order for auditing." },
-          { target: '[data-tour="nav"]', title: "Bottom nav", text: "Jump back home or add a package from anywhere in the app." },
-        ]
-      : [];
+  if (!steps.length) return;
 
-  if (!defs.length) return;
+  const stepEl = document.getElementById("tour-step");
+  const titleEl = document.getElementById("tour-title");
+  const textEl = document.getElementById("tour-text");
+  const nextBtn = document.getElementById("tour-next");
+  const prevBtn = document.getElementById("tour-prev");
+  const skipBtn = document.getElementById("tour-skip");
+  const closeHit = q("[data-tour-close]");
 
-  let i = 0;
-  let activeTarget = null;
+  let index = 0;
 
-  const clearHighlight = () => {
-    qAll(".tour-target").forEach((el) => el.classList.remove("tour-target"));
-    activeTarget = null;
-  };
-
-  const openTour = () => {
-    tour.hidden = false;
-    document.body.style.overflow = "hidden";
-  };
+  const clearTarget = () => qAll(".tour-target").forEach((el) => el.classList.remove("tour-target"));
 
   const closeTour = (markSeen = false) => {
     tour.hidden = true;
     document.body.style.overflow = "";
-    clearHighlight();
+    clearTarget();
     if (markSeen) {
-      try {
-        localStorage.setItem(TOUR_KEY, "1");
-      } catch (_) {}
+      try { localStorage.setItem(TOUR_KEY, "1"); } catch (_) {}
     }
   };
 
-  const renderStep = () => {
-    const def = defs[i];
+  const render = () => {
+    const def = steps[index];
     if (!def) return;
 
-    clearHighlight();
+    clearTarget();
     const target = q(def.target);
     if (target) {
-      activeTarget = target;
       target.classList.add("tour-target");
       target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     }
 
-    stepEl.textContent = `Step ${i + 1} of ${defs.length}`;
-    titleEl.textContent = def.title;
-    textEl.textContent = def.text;
-    prevBtn.style.visibility = i === 0 ? "hidden" : "visible";
-    nextBtn.textContent = i === defs.length - 1 ? "Done" : "Next";
+    if (stepEl) stepEl.textContent = `Step ${index + 1} of ${steps.length}`;
+    if (titleEl) titleEl.textContent = def.title;
+    if (textEl) textEl.textContent = def.text;
+    if (prevBtn) prevBtn.style.visibility = index === 0 ? "hidden" : "visible";
+    if (nextBtn) nextBtn.textContent = index === steps.length - 1 ? "Done" : "Next";
   };
 
   const startTour = () => {
-    i = 0;
-    openTour();
-    renderStep();
+    index = 0;
+    tour.hidden = false;
+    document.body.style.overflow = "hidden";
+    render();
   };
 
   nextBtn?.addEventListener("click", () => {
-    if (i >= defs.length - 1) {
+    if (index >= steps.length - 1) {
       closeTour(true);
       return;
     }
-    i += 1;
-    renderStep();
+    index += 1;
+    render();
   });
 
   prevBtn?.addEventListener("click", () => {
-    if (i <= 0) return;
-    i -= 1;
-    renderStep();
+    if (index <= 0) return;
+    index -= 1;
+    render();
   });
 
   skipBtn?.addEventListener("click", () => closeTour(true));
@@ -108,21 +94,13 @@
   document.addEventListener("keydown", (ev) => {
     if (tour.hidden) return;
     if (ev.key === "Escape") closeTour(true);
-    if (ev.key === "ArrowRight") nextBtn?.click();
-    if (ev.key === "ArrowLeft") prevBtn?.click();
   });
 
-  document.querySelectorAll("[data-start-tour]").forEach((btn) => {
-    btn.addEventListener("click", startTour);
-  });
+  qAll("[data-start-tour]").forEach((btn) => btn.addEventListener("click", startTour));
 
-  // First-run onboarding.
   let seen = false;
-  try {
-    seen = localStorage.getItem(TOUR_KEY) === "1";
-  } catch (_) {}
+  try { seen = localStorage.getItem(TOUR_KEY) === "1"; } catch (_) {}
   if (!seen) {
-    window.setTimeout(startTour, 380);
+    setTimeout(startTour, 420);
   }
 })();
-
