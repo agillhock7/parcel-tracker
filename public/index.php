@@ -97,6 +97,7 @@ $router->get('/', function () use ($tpl, $shipments, $csrf, $flash, $baseUrl, $s
     $description = 'Track deliveries, update shipment timelines, and monitor parcel status in one clean dashboard.';
     $tpl->render('home', [
         'title' => $siteName,
+        'page' => 'home',
         'csrf' => $csrf->token(),
         'flash' => $flash->consume(),
         'upcoming' => $upcoming,
@@ -147,6 +148,7 @@ $router->get('/shipments/{id}', function (array $params) use ($tpl, $shipments, 
     $description = 'Shipment ' . $name . ' is currently ' . $status . '. View latest timeline updates and tracking events.';
     $tpl->render('shipment', [
         'title' => $name . ' | ' . $siteName,
+        'page' => 'shipment',
         'csrf' => $csrf->token(),
         'flash' => $flash->consume(),
         'shipment' => $s,

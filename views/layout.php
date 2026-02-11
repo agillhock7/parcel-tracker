@@ -88,8 +88,38 @@
     <link rel="stylesheet" href="/assets/app.css">
   </head>
   <body>
+    <div class="scene" aria-hidden="true">
+      <span class="blob blob--a"></span>
+      <span class="blob blob--b"></span>
+    </div>
+
     <main class="wrap">
-      <?= $content ?? '' ?>
+      <section class="phone" data-tour-root>
+        <div class="phone__notch" aria-hidden="true"></div>
+        <div class="phone__content">
+          <?= $content ?? '' ?>
+        </div>
+
+        <nav class="bottomnav" aria-label="Primary" data-tour="nav">
+          <a class="bottomnav__item<?= (($page ?? '') === 'home') ? ' is-active' : '' ?>" href="/">
+            <span class="bottomnav__ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+            </span>
+            <span class="bottomnav__lbl">Home</span>
+          </a>
+          <a class="bottomnav__item is-add" href="/#add" data-tour="add-shortcut">
+            <span class="bottomnav__plus" aria-hidden="true">+</span>
+            <span class="bottomnav__lbl">Add</span>
+          </a>
+          <a class="bottomnav__item" href="/health">
+            <span class="bottomnav__ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-3.5 4.3-5 8-5s6.5 1.5 8 5"/></svg>
+            </span>
+            <span class="bottomnav__lbl">Health</span>
+          </a>
+        </nav>
+      </section>
+
       <footer class="foot">
         <span class="foot__muted">
           Design influenced by Mr. Pablo Benito:
@@ -98,19 +128,20 @@
       </footer>
     </main>
 
-    <nav class="bottomnav" aria-label="Primary">
-      <a class="bottomnav__item" href="/">
-        <span class="bottomnav__ico" aria-hidden="true">⌂</span>
-        <span class="bottomnav__lbl">Home</span>
-      </a>
-      <a class="bottomnav__item" href="/#add">
-        <span class="bottomnav__plus" aria-hidden="true">+</span>
-        <span class="bottomnav__lbl">Add</span>
-      </a>
-      <a class="bottomnav__item" href="/health">
-        <span class="bottomnav__ico" aria-hidden="true">♥</span>
-        <span class="bottomnav__lbl">Health</span>
-      </a>
-    </nav>
+    <div id="tour" class="tour" hidden aria-live="polite">
+      <div class="tour__backdrop" data-tour-close></div>
+      <div class="tour__card" role="dialog" aria-modal="true" aria-label="Onboarding tour">
+        <p class="tour__step" id="tour-step">Step 1 of 4</p>
+        <h2 class="tour__title" id="tour-title">Welcome</h2>
+        <p class="tour__text" id="tour-text"></p>
+        <div class="tour__actions">
+          <button type="button" class="tour__btn tour__btn--ghost" id="tour-skip">Skip</button>
+          <button type="button" class="tour__btn tour__btn--ghost" id="tour-prev">Back</button>
+          <button type="button" class="tour__btn" id="tour-next">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="/assets/app.js"></script>
   </body>
 </html>

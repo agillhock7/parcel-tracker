@@ -10,19 +10,18 @@
 
 <div class="crumbs">
   <a href="/" class="crumbs__link">All shipments</a>
-  <span class="crumbs__current"><?= htmlspecialchars($label !== '' ? $label : $tn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+  <button type="button" class="crumbs__menu" aria-label="More options">⋮</button>
 </div>
 
-<section class="head">
-  <div>
-    <h1 class="head__title"><?= htmlspecialchars($label !== '' ? $label : 'Shipment', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
-    <div class="head__sub">
-      <span class="code"><?= htmlspecialchars($tn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
-    </div>
-  </div>
-  <div class="head__side">
-    <span class="chip chip--<?= htmlspecialchars($st, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($st, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
-  </div>
+<section class="status" data-tour="status">
+  <h1 class="status__title">Package <?= htmlspecialchars(str_replace('_', ' ', $st), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>!</h1>
+  <p class="status__sub"><?= htmlspecialchars($label !== '' ? $label : 'Parcel added to your tracking list', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+  <img src="/assets/graphics/truck.svg" alt="Parcel is moving through transit points" class="status__img">
+</section>
+
+<section class="tracking-number">
+  <p class="tracking-number__label">Tracking number</p>
+  <p class="tracking-number__value"><?= htmlspecialchars($tn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
 </section>
 
 <?php if (!empty($flash) && is_array($flash)): ?>
@@ -31,9 +30,9 @@
   </div>
 <?php endif; ?>
 
-<div class="grid">
-  <section class="card">
-    <div class="card__hd">Add Event</div>
+<div class="grid grid--detail">
+  <section class="card" id="change">
+    <div class="card__hd">Update Shipment</div>
     <div class="card__bd">
       <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/events" class="form">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)($csrf ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
@@ -62,7 +61,7 @@
         <textarea class="in" name="description" required placeholder="Package accepted, arrived at facility, out for delivery..."></textarea>
 
         <div class="actions">
-          <button class="btn" type="submit">Add event</button>
+          <button class="btn" type="submit">Save update</button>
         </div>
       </form>
 
@@ -76,8 +75,8 @@
     </div>
   </section>
 
-  <section class="card">
-    <div class="card__hd">Timeline</div>
+  <section class="card" data-tour="timeline">
+    <div class="card__hd">Tracking timeline</div>
     <div class="card__bd">
       <?php if (empty($events)): ?>
         <p class="muted">No events yet.</p>
