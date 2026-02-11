@@ -1,3 +1,3 @@
 deployment:
   tasks:
-    - /bin/bash -lc 'set -e; DEPLOYPATH=""; for p in /home/ajgill/tb4/ /home/ajgill/public_html/tb4/; do if [ -d "$p" ]; then DEPLOYPATH="$p"; break; fi; done; if [ -z "$DEPLOYPATH" ]; then echo "Deploy path not found. Expected /home/ajgill/tb4/ or /home/ajgill/public_html/tb4/"; exit 1; fi; /bin/mkdir -p "$DEPLOYPATH"; if [ ! -d public ]; then echo "Missing public/"; exit 1; fi; /bin/cp -a public/. "$DEPLOYPATH"; for d in src views sql config; do if [ -d "$d" ]; then /bin/cp -a "$d" "$DEPLOYPATH"; fi; done; /bin/mkdir -p "$DEPLOYPATH/storage/logs"; /bin/chmod -R u+rwX "$DEPLOYPATH/storage" 2>/dev/null || true'
+    - /bin/bash scripts/cpanel_deploy.sh
