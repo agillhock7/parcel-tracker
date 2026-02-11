@@ -1,5 +1,6 @@
 (() => {
   const TOUR_KEY = "pt_onboarding_seen_v3";
+  const THEME_KEY = "pt_theme";
   const root = document.getElementById("app-shell");
   const tour = document.getElementById("tour");
   if (!root || !tour) return;
@@ -10,6 +11,58 @@
   const navBtn = q("[data-nav-toggle]");
   const nav = q("[data-nav]");
   navBtn?.addEventListener("click", () => nav?.classList.toggle("is-open"));
+
+  const themeToggle = document.getElementById("theme-toggle");
+  const setTheme = (theme) => {
+    const normalized = theme === "dark" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", normalized);
+    if (themeToggle) {
+      themeToggle.textContent = normalized === "dark" ? "Light mode" : "Dark mode";
+    }
+  };
+  const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
+  setTheme(currentTheme);
+  themeToggle?.addEventListener("click", () => {
+    const now = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    const next = now === "dark" ? "light" : "dark";
+    setTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
+  });
+
+  const addModal = document.getElementById("add-modal");
+  const addModalInput = document.getElementById("modal_tracking_number");
+  const syncBodyLock = () => {
+    const modalOpen = addModal && !addModal.hidden;
+    const tourOpen = !tour.hidden;
+    document.body.style.overflow = modalOpen || tourOpen ? "hidden" : "";
+  };
+  const openAddModal = () => {
+    if (!(addModal instanceof HTMLElement)) return;
+    addModal.hidden = false;
+    addModal.setAttribute("aria-hidden", "false");
+    syncBodyLock();
+    setTimeout(() => {
+      if (addModalInput instanceof HTMLInputElement) {
+        addModalInput.focus();
+      }
+    }, 20);
+  };
+  const closeAddModal = () => {
+    if (!(addModal instanceof HTMLElement)) return;
+    addModal.hidden = true;
+    addModal.setAttribute("aria-hidden", "true");
+    syncBodyLock();
+  };
+  qAll("[data-add-shipment-open]").forEach((el) => {
+    el.addEventListener("click", (ev) => {
+      if (!(addModal instanceof HTMLElement)) return;
+      ev.preventDefault();
+      openAddModal();
+    });
+  });
+  qAll("[data-add-modal-close]").forEach((el) => {
+    el.addEventListener("click", () => closeAddModal());
+  });
 
   let deferredInstallPrompt = null;
   const pwaUi = document.getElementById("pwa-ui");
@@ -159,7 +212,7 @@
 
   const closeTour = (markSeen = false) => {
     tour.hidden = true;
-    document.body.style.overflow = "";
+    syncBodyLock();
     clearTarget();
     if (markSeen) {
       try { localStorage.setItem(TOUR_KEY, "1"); } catch (_) {}
@@ -187,7 +240,7 @@
   const startTour = () => {
     index = 0;
     tour.hidden = false;
-    document.body.style.overflow = "hidden";
+    syncBodyLock();
     render();
   };
 
@@ -210,8 +263,13 @@
   closeHit?.addEventListener("click", () => closeTour(true));
 
   document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (addModal instanceof HTMLElement && !addModal.hidden) {
+      closeAddModal();
+      return;
+    }
     if (tour.hidden) return;
-    if (ev.key === "Escape") closeTour(true);
+    closeTour(true);
   });
 
   qAll("[data-start-tour]").forEach((btn) => btn.addEventListener("click", startTour));

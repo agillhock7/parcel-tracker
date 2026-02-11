@@ -111,6 +111,18 @@
     <?php endif; ?>
 
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("pt_theme");
+          const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = saved === "light" || saved === "dark" ? saved : (prefersDark ? "dark" : "light");
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -133,9 +145,10 @@
             <button type="button" class="nav-toggle" data-nav-toggle aria-label="Toggle menu">☰</button>
             <nav class="site-nav" data-nav>
               <a href="/" class="site-nav__link<?= $page === 'home' ? ' is-active' : '' ?>">Dashboard</a>
-              <a href="/#add" class="site-nav__link">Add Shipment</a>
+              <a href="#add-shipment" class="site-nav__link" data-add-shipment-open>Add Shipment</a>
             </nav>
             <div class="site-actions">
+              <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle light and dark theme">Dark mode</button>
               <div class="avatar" title="<?= $e($userName !== '' ? $userName : $userEmail) ?>">
                 <?php if ($hasAvatar): ?>
                   <img class="avatar__img" src="<?= $e($userAvatar) ?>" alt="<?= $e($userName !== '' ? $userName : 'Account avatar') ?>">
@@ -150,6 +163,7 @@
             </div>
           <?php else: ?>
             <div class="site-actions">
+              <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle light and dark theme">Dark mode</button>
               <a href="/login" class="btn btn--ghost<?= $page === 'login' ? ' is-active' : '' ?>">Sign in</a>
               <a href="/signup" class="btn<?= $page === 'signup' ? ' is-active' : '' ?>">Create account</a>
             </div>
@@ -160,6 +174,40 @@
       <main class="page-wrap">
         <?= $content ?? '' ?>
       </main>
+
+      <?php if ($isAuth): ?>
+        <div class="add-modal" id="add-modal" hidden aria-hidden="true">
+          <div class="add-modal__backdrop" data-add-modal-close></div>
+          <div class="add-modal__card" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+            <div class="add-modal__head">
+              <h2 class="add-modal__title" id="add-modal-title">Add Shipment</h2>
+              <button type="button" class="add-modal__close" data-add-modal-close aria-label="Close add shipment">×</button>
+            </div>
+            <p class="add-modal__sub">Create a new tracking card and start your timeline.</p>
+            <form method="post" action="/shipments" class="form">
+              <input type="hidden" name="csrf" value="<?= $e((string)($csrf ?? '')) ?>">
+
+              <label class="lbl" for="modal_tracking_number">Tracking number</label>
+              <input class="in" id="modal_tracking_number" name="tracking_number" autocomplete="off" required placeholder="e.g. 1Z999AA10123456784">
+
+              <div class="row row--2">
+                <div>
+                  <label class="lbl" for="modal_label">Label (optional)</label>
+                  <input class="in" id="modal_label" name="label" autocomplete="off" placeholder="Client return">
+                </div>
+                <div>
+                  <label class="lbl" for="modal_carrier">Carrier (optional)</label>
+                  <input class="in" id="modal_carrier" name="carrier" autocomplete="off" placeholder="UPS, USPS, FedEx...">
+                </div>
+              </div>
+
+              <div class="actions">
+                <button class="btn" type="submit">Create shipment</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      <?php endif; ?>
 
       <footer class="foot">
         <span class="foot__muted">

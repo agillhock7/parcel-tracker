@@ -25,7 +25,7 @@
     <p class="hero__sub">Track active deliveries, review history, and update shipment events in real time.</p>
     <div class="hero__actions">
       <button type="button" class="btn btn--ghost" data-start-tour>Take tour</button>
-      <a href="#add" class="btn">Add shipment</a>
+      <a href="#add-shipment" class="btn" data-add-shipment-open>Add shipment</a>
     </div>
   </div>
   <div class="hero-art" aria-hidden="true" data-reveal data-reveal-delay="1">
