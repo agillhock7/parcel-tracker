@@ -7,8 +7,6 @@
   $st = (string)($shipment['status'] ?? 'unknown');
   $archived = !empty($shipment['archived']);
   $liveEnabled = !empty($tracking_live_enabled);
-  $trackingProvider = strtolower(trim((string)($tracking_provider ?? '')));
-  $providerLabel = $trackingProvider !== '' ? strtoupper($trackingProvider) : 'tracking API';
   $trackingConfigHint = trim((string)($tracking_config_hint ?? 'SHIP24_API_KEY'));
 ?>
 
@@ -64,10 +62,8 @@
 
     <form method="post" action="/shipments/<?= htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/sync" class="sync-form">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)($csrf ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-      <button class="btn btn--ghost" type="submit">Sync live tracking</button>
-      <?php if ($liveEnabled): ?>
-        <span class="sync-form__hint">Uses live carrier data (<?= htmlspecialchars($providerLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>)</span>
-      <?php else: ?>
+      <button class="btn btn--ghost" type="submit">Check Tracking with AI</button>
+      <?php if (!$liveEnabled): ?>
         <span class="sync-form__hint sync-form__hint--warn">Set `<?= htmlspecialchars($trackingConfigHint, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>` in `.env` to enable live sync.</span>
       <?php endif; ?>
     </form>
