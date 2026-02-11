@@ -690,12 +690,7 @@ $router->post('/shipments/{id}/sync', function (array $params) use ($shipments, 
             isset($sync['carrier']) ? (string)$sync['carrier'] : null
         );
 
-        $msg = 'Live tracking synced. ' . $inserted . ' new event(s) imported.';
-        $warn = trim((string)($sync['warning'] ?? ''));
-        if ($warn !== '') {
-            $msg .= ' Note: ' . $warn;
-        }
-        $flash->set('ok', $msg);
+        $flash->set('ok', 'Live tracking synced. ' . $inserted . ' new event(s) imported.');
         redirectTo('/shipments/' . $id);
     } catch (Throwable $e) {
         $flash->set('err', $e->getMessage());

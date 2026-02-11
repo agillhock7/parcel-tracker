@@ -38,7 +38,6 @@ final class OpenAiTrackingClient
      *   error?:string,
      *   status?:string,
      *   carrier?:string,
-     *   warning?:string,
      *   events?:list<array{event_time:string,location:?string,description:string,raw_payload:array<string,mixed>}>
      * }
      */
@@ -62,13 +61,14 @@ final class OpenAiTrackingClient
                 ['role' => 'system', 'content' => $this->systemPrompt()],
                 ['role' => 'user', 'content' => $prompt],
             ],
-            'temperature' => 0.1,
-            'max_output_tokens' => 900,
+            'temperature' => 0.0,
+            'max_output_tokens' => 1200,
         ];
         if ($this->useWebSearch) {
             $payload['tools'] = [
                 ['type' => 'web_search_preview'],
             ];
+            $payload['tool_choice'] = 'auto';
         }
 
         $res = $this->requestJson('POST', '/responses', $payload);
@@ -85,21 +85,25 @@ final class OpenAiTrackingClient
 
         $parsed = $this->decodeJsonPayload($text);
         if (!is_array($parsed)) {
-            $this->log('openai tracking parse failure: output=' . substr($text, 0, 400));
-            return ['ok' => false, 'error' => 'OpenAI response could not be parsed as structured tracking JSON.'];
+            $parsed = $this->repairStructuredOutput($text, $trackingNumber, $carrierHint !== '' ? $carrierHint : null);
+            if (!is_array($parsed)) {
+                $this->log('openai tracking parse failure: output=' . substr($text, 0, 400));
+                return ['ok' => false, 'error' => 'OpenAI response could not be parsed as structured tracking JSON.'];
+            }
         }
 
         $events = $this->normalizeEvents($parsed['events'] ?? null, $parsed);
         $status = $this->normalizeStatus((string)($parsed['status'] ?? 'unknown'));
+        if ($status === 'unknown') {
+            $status = $this->inferStatusFromEventsAndNotes($events, (string)($parsed['notes'] ?? ''));
+        }
         $carrier = $this->normalizeCarrier($parsed['carrier'] ?? null, $carrierHint !== '' ? $carrierHint : null);
-        $warning = $this->buildWarning($parsed);
 
         return [
             'ok' => true,
             'status' => $status,
             'carrier' => $carrier,
             'events' => $events,
-            'warning' => $warning,
         ];
     }
 
@@ -108,7 +112,8 @@ final class OpenAiTrackingClient
         return implode(' ', [
             'You are a parcel tracking resolver.',
             'Use web search when available and prefer official carrier sources.',
-            'If you cannot verify current status, set status to "unknown" and explain uncertainty.',
+            'Return the most probable current status based on available evidence.',
+            'Do not leave status unknown unless there is no usable signal at all.',
             'Return only JSON with this shape:',
             '{"status":"created|in_transit|out_for_delivery|delivered|exception|unknown",',
             '"carrier":"string|null","confidence":"high|medium|low",',
@@ -127,25 +132,10 @@ final class OpenAiTrackingClient
         if ($carrierHint !== null && trim($carrierHint) !== '') {
             $lines[] = 'Carrier hint: ' . $carrierHint;
         }
+        $lines[] = 'Prioritize official carrier tracking pages and recent scan details.';
+        $lines[] = 'Infer a best status even when event detail is partial.';
         $lines[] = 'Return strict JSON only, no markdown fences.';
         return implode("\n", $lines);
-    }
-
-    private function buildWarning(array $parsed): ?string
-    {
-        $confidence = strtolower(trim((string)($parsed['confidence'] ?? '')));
-        $notes = trim((string)($parsed['notes'] ?? ''));
-        if ($confidence === '' && $notes === '') {
-            return null;
-        }
-
-        if ($confidence === 'low') {
-            return $notes !== '' ? ('Low confidence: ' . $notes) : 'Low confidence result. Verify on carrier site.';
-        }
-        if ($confidence === 'medium') {
-            return $notes !== '' ? ('Medium confidence: ' . $notes) : null;
-        }
-        return $notes !== '' ? $notes : null;
     }
 
     private function normalizeStatus(string $status): string
@@ -161,6 +151,45 @@ final class OpenAiTrackingClient
             'exception', 'failed_attempt', 'expired' => 'exception',
             default => 'unknown',
         };
+    }
+
+    /**
+     * @param list<array{event_time:string,location:?string,description:string,raw_payload:array<string,mixed>}> $events
+     */
+    private function inferStatusFromEventsAndNotes(array $events, string $notes): string
+    {
+        $texts = [];
+        foreach ($events as $event) {
+            $desc = strtolower(trim((string)($event['description'] ?? '')));
+            if ($desc !== '') {
+                $texts[] = $desc;
+            }
+        }
+        $n = strtolower(trim($notes));
+        if ($n !== '') {
+            $texts[] = $n;
+        }
+        $haystack = implode(' ', $texts);
+        if ($haystack === '') {
+            return 'in_transit';
+        }
+
+        if (preg_match('/delivered|delivrd|proof.?of.?delivery|signed/', $haystack) === 1) {
+            return 'delivered';
+        }
+        if (preg_match('/out.?for.?delivery|with.?courier|on.?vehicle.?for.?delivery/', $haystack) === 1) {
+            return 'out_for_delivery';
+        }
+        if (preg_match('/exception|failed|attempted|undeliverable|held|return.?to.?sender|customs/', $haystack) === 1) {
+            return 'exception';
+        }
+        if (preg_match('/in.?transit|departed|arrived|processed|facility|hub|accepted|shipment.?received/', $haystack) === 1) {
+            return 'in_transit';
+        }
+        if (preg_match('/label.?created|info.?received|pending/', $haystack) === 1) {
+            return 'created';
+        }
+        return 'in_transit';
     }
 
     private function normalizeCarrier($carrier, ?string $fallback): ?string
@@ -307,6 +336,36 @@ final class OpenAiTrackingClient
         $slice = substr($text, $start, $end - $start + 1);
         $decoded = json_decode($slice, true);
         return is_array($decoded) ? $decoded : null;
+    }
+
+    private function repairStructuredOutput(string $rawText, string $trackingNumber, ?string $carrierHint): ?array
+    {
+        $prompt = [
+            'Convert the following tracking output to strict JSON.',
+            'Tracking number: ' . $trackingNumber,
+            'Carrier hint: ' . ($carrierHint ?? ''),
+            'Output schema:',
+            '{"status":"created|in_transit|out_for_delivery|delivered|exception|unknown","carrier":"string|null","confidence":"high|medium|low","notes":"string","events":[{"event_time":"YYYY-MM-DD HH:MM:SS","location":"string|null","description":"string"}]}',
+            'Only return JSON.',
+            'Raw output:',
+            $rawText,
+        ];
+
+        $payload = [
+            'model' => $this->model,
+            'input' => implode("\n", $prompt),
+            'temperature' => 0.0,
+            'max_output_tokens' => 900,
+        ];
+        $res = $this->requestJson('POST', '/responses', $payload);
+        if ($res['status'] < 200 || $res['status'] >= 300) {
+            return null;
+        }
+        $text = $this->extractOutputText($res['json']);
+        if ($text === '') {
+            return null;
+        }
+        return $this->decodeJsonPayload($text);
     }
 
     /** @param array<string,mixed> $json */
