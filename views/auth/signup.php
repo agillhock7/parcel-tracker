@@ -1,4 +1,8 @@
 <?php declare(strict_types=1); ?>
+<?php
+  $authData = is_array($auth ?? null) ? $auth : [];
+  $oauthProviders = is_array($authData['oauth_providers'] ?? null) ? $authData['oauth_providers'] : [];
+?>
 
 <section class="auth-wrap">
   <article class="card card--padded auth-card">
@@ -27,6 +31,20 @@
         <button class="btn" type="submit">Create account</button>
       </div>
     </form>
+
+    <?php if (!empty($oauthProviders)): ?>
+      <div class="oauth">
+        <p class="oauth__label">Or sign up with</p>
+        <div class="oauth__actions">
+          <?php if (!empty($oauthProviders['github'])): ?>
+            <a class="btn btn--ghost oauth__btn" href="/auth/github/start">GitHub</a>
+          <?php endif; ?>
+          <?php if (!empty($oauthProviders['discord'])): ?>
+            <a class="btn btn--ghost oauth__btn" href="/auth/discord/start">Discord</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <p class="auth-card__switch">Already have an account? <a href="/login">Sign in</a>.</p>
   </article>

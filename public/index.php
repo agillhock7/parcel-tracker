@@ -46,6 +46,35 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+function sendSecurityHeaders(bool $https): void
+{
+    header('X-Frame-Options: DENY');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+    header('Cross-Origin-Opener-Policy: same-origin');
+    header('Cross-Origin-Resource-Policy: same-origin');
+    if ($https) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
+
+    $csp = [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        "img-src 'self' data: https:",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "script-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+        "object-src 'none'",
+    ];
+    header('Content-Security-Policy: ' . implode('; ', $csp));
+}
+
+sendSecurityHeaders($https);
+
 set_exception_handler(function (Throwable $e) use ($logDir): void {
     $line = '[' . gmdate('c') . '] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() . "\n";
     @file_put_contents($logDir . '/app.log', $line, FILE_APPEND);
@@ -144,13 +173,25 @@ try {
     @file_put_contents($logDir . '/app.log', '[' . gmdate('c') . '] db-init: ' . $e->getMessage() . "\n", FILE_APPEND);
 }
 
+$users = null;
 $auth = null;
+$oauth = null;
+$passwordResets = null;
 if ($pdo) {
     $users = new App\Auth\UserRepository($pdo);
     $auth = new App\Auth\AuthService($users);
+    $oauth = new App\Auth\OAuthService($users, $baseUrl, $logDir);
+    $passwordResets = new App\Auth\PasswordResetService(
+        $users,
+        new App\Auth\PasswordResetRepository($pdo),
+        $auth,
+        $baseUrl,
+        $logDir
+    );
 }
 $currentUser = $auth?->user();
 $shipments = $pdo ? new App\Shipment\DbShipmentService($pdo) : null;
+$oauthProviders = $oauth?->availableProviders() ?? [];
 
 $metaBase = [
     'site_name' => $siteName,
@@ -166,6 +207,7 @@ $metaBase = [
 $authView = [
     'user' => $currentUser,
     'is_authenticated' => $currentUser !== null,
+    'oauth_providers' => $oauthProviders,
 ];
 
 $router = new App\Http\Router();
@@ -238,6 +280,101 @@ $router->get('/login', function () use ($tpl, $csrf, $flash, $authView, $metaBas
     ]);
 });
 
+$router->get('/forgot-password', function () use ($tpl, $csrf, $flash, $authView, $metaBase, $baseUrl, $siteName, $vite, $currentUser): void {
+    if ($currentUser) {
+        redirectTo('/');
+    }
+
+    $tpl->render('auth/forgot-password', [
+        'title' => 'Forgot password | ' . $siteName,
+        'page' => 'forgot-password',
+        'auth' => $authView,
+        'csrf' => $csrf->token(),
+        'flash' => $flash->consume(),
+        'vite' => $vite,
+        'meta' => array_merge($metaBase, [
+            'description' => 'Request a secure password reset link for your Parcel Tracker account.',
+            'url' => absoluteUrl('/forgot-password', $baseUrl),
+        ]),
+    ]);
+});
+
+$router->post('/forgot-password', function () use ($csrf, $flash, $passwordResets): void {
+    $csrf->requireValidPost();
+    $email = (string)($_POST['email'] ?? '');
+
+    if ($passwordResets) {
+        $passwordResets->requestReset($email);
+        $flash->set('ok', 'If that email exists, a reset link was sent.');
+    } else {
+        $flash->set('err', 'Password reset is unavailable right now.');
+    }
+
+    redirectTo('/forgot-password');
+});
+
+$router->get('/reset-password', function () use (
+    $tpl,
+    $csrf,
+    $flash,
+    $authView,
+    $metaBase,
+    $baseUrl,
+    $siteName,
+    $vite,
+    $currentUser,
+    $passwordResets
+): void {
+    if ($currentUser) {
+        redirectTo('/');
+    }
+
+    $token = trim((string)($_GET['token'] ?? ''));
+    $tokenValid = $passwordResets ? $passwordResets->isTokenActive($token) : false;
+
+    $tpl->render('auth/reset-password', [
+        'title' => 'Reset password | ' . $siteName,
+        'page' => 'reset-password',
+        'auth' => $authView,
+        'csrf' => $csrf->token(),
+        'flash' => $flash->consume(),
+        'token' => $token,
+        'token_valid' => $tokenValid,
+        'vite' => $vite,
+        'meta' => array_merge($metaBase, [
+            'description' => 'Set a new password for your Parcel Tracker account.',
+            'url' => absoluteUrl('/reset-password', $baseUrl),
+            'robots' => 'noindex,nofollow',
+        ]),
+    ]);
+});
+
+$router->post('/reset-password', function () use ($csrf, $flash, $passwordResets): void {
+    $csrf->requireValidPost();
+
+    if (!$passwordResets) {
+        $flash->set('err', 'Password reset is unavailable right now.');
+        redirectTo('/forgot-password');
+    }
+
+    $token = (string)($_POST['token'] ?? '');
+    $password = (string)($_POST['password'] ?? '');
+    $confirmPassword = (string)($_POST['password_confirm'] ?? '');
+    if (!hash_equals($password, $confirmPassword)) {
+        $flash->set('err', 'Password confirmation does not match.');
+        redirectTo('/reset-password?token=' . rawurlencode($token));
+    }
+
+    $result = $passwordResets->resetPassword($token, $password);
+    if (!($result['ok'] ?? false)) {
+        $flash->set('err', (string)($result['error'] ?? 'Unable to reset password.'));
+        redirectTo('/reset-password?token=' . rawurlencode($token));
+    }
+
+    $flash->set('ok', 'Password updated. Sign in with your new password.');
+    redirectTo('/login');
+});
+
 $router->post('/login', function () use ($csrf, $flash, $auth, $dbError): void {
     $csrf->requireValidPost();
 
@@ -261,6 +398,92 @@ $router->post('/login', function () use ($csrf, $flash, $auth, $dbError): void {
 
     clearLoginFailures();
     $flash->set('ok', 'Signed in successfully.');
+    redirectTo('/');
+});
+
+$router->get('/auth/github/start', function () use ($oauth, $flash): void {
+    if (!$oauth) {
+        $flash->set('err', 'Social login is unavailable right now.');
+        redirectTo('/login');
+    }
+
+    $result = $oauth->start('github');
+    if (!($result['ok'] ?? false)) {
+        $flash->set('err', (string)($result['error'] ?? 'GitHub login is unavailable.'));
+        redirectTo('/login');
+    }
+
+    header('Location: ' . (string)$result['redirect'], true, 302);
+    exit;
+});
+
+$router->get('/auth/github/callback', function () use ($oauth, $auth, $flash): void {
+    if (!$oauth || !$auth) {
+        $flash->set('err', 'Social login is unavailable right now.');
+        redirectTo('/login');
+    }
+
+    $result = $oauth->callback(
+        'github',
+        (string)($_GET['code'] ?? ''),
+        (string)($_GET['state'] ?? '')
+    );
+    if (!($result['ok'] ?? false)) {
+        $flash->set('err', (string)($result['error'] ?? 'Unable to authenticate with GitHub.'));
+        redirectTo('/login');
+    }
+
+    $login = $auth->loginByUserId((int)($result['user_id'] ?? 0));
+    if (!($login['ok'] ?? false)) {
+        $flash->set('err', (string)($login['error'] ?? 'Unable to sign in after GitHub auth.'));
+        redirectTo('/login');
+    }
+
+    clearLoginFailures();
+    $flash->set('ok', 'Signed in with GitHub.');
+    redirectTo('/');
+});
+
+$router->get('/auth/discord/start', function () use ($oauth, $flash): void {
+    if (!$oauth) {
+        $flash->set('err', 'Social login is unavailable right now.');
+        redirectTo('/login');
+    }
+
+    $result = $oauth->start('discord');
+    if (!($result['ok'] ?? false)) {
+        $flash->set('err', (string)($result['error'] ?? 'Discord login is unavailable.'));
+        redirectTo('/login');
+    }
+
+    header('Location: ' . (string)$result['redirect'], true, 302);
+    exit;
+});
+
+$router->get('/auth/discord/callback', function () use ($oauth, $auth, $flash): void {
+    if (!$oauth || !$auth) {
+        $flash->set('err', 'Social login is unavailable right now.');
+        redirectTo('/login');
+    }
+
+    $result = $oauth->callback(
+        'discord',
+        (string)($_GET['code'] ?? ''),
+        (string)($_GET['state'] ?? '')
+    );
+    if (!($result['ok'] ?? false)) {
+        $flash->set('err', (string)($result['error'] ?? 'Unable to authenticate with Discord.'));
+        redirectTo('/login');
+    }
+
+    $login = $auth->loginByUserId((int)($result['user_id'] ?? 0));
+    if (!($login['ok'] ?? false)) {
+        $flash->set('err', (string)($login['error'] ?? 'Unable to sign in after Discord auth.'));
+        redirectTo('/login');
+    }
+
+    clearLoginFailures();
+    $flash->set('ok', 'Signed in with Discord.');
     redirectTo('/');
 });
 
@@ -442,6 +665,14 @@ $router->post('/shipments/{id}/archive', function (array $params) use ($shipment
 });
 
 $router->get('/health', function () use ($appRoot, $pdo, $currentUser): void {
+    if (strtolower((string)getenv('APP_ENV')) === 'production'
+        && trim((string)getenv('ENABLE_HEALTH_ENDPOINT')) !== '1') {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "Not Found\n";
+        return;
+    }
+
     header('Content-Type: application/json; charset=utf-8');
 
     echo json_encode([

@@ -71,6 +71,22 @@ final class AuthService
         session_regenerate_id(true);
     }
 
+    /** @return array{ok:bool,error?:string,user_id?:int} */
+    public function loginByUserId(int $userId): array
+    {
+        if ($userId <= 0) {
+            return ['ok' => false, 'error' => 'Invalid account.'];
+        }
+
+        $user = $this->users->findById($userId);
+        if (!$user) {
+            return ['ok' => false, 'error' => 'Account not found.'];
+        }
+
+        $this->storeUserId((int)$user['id']);
+        return ['ok' => true, 'user_id' => (int)$user['id']];
+    }
+
     public function userId(): ?int
     {
         $v = $_SESSION[self::SESSION_USER_ID] ?? null;
@@ -95,6 +111,30 @@ final class AuthService
             return null;
         }
         return $this->users->findById($id);
+    }
+
+    /** @return array{ok:bool,error?:string} */
+    public function updatePassword(int $userId, string $password): array
+    {
+        if ($userId <= 0) {
+            return ['ok' => false, 'error' => 'Invalid account.'];
+        }
+        if (!$this->isStrongPassword($password)) {
+            return ['ok' => false, 'error' => 'Password must be at least 10 chars and include upper, lower, and number.'];
+        }
+
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        if (!is_string($hash) || $hash === '') {
+            throw new RuntimeException('Unable to hash password.');
+        }
+
+        $this->users->updatePasswordHash($userId, $hash);
+        return ['ok' => true];
+    }
+
+    public function validatePassword(string $password): bool
+    {
+        return $this->isStrongPassword($password);
     }
 
     private function storeUserId(int $userId): void
@@ -130,4 +170,3 @@ final class AuthService
         return true;
     }
 }
-

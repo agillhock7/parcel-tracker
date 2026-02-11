@@ -7,6 +7,7 @@
   $siteName = (string)($meta['site_name'] ?? 'Parcel Tracker');
   $pageTitle = (string)($title ?? $siteName);
   $description = (string)($meta['description'] ?? 'Track packages, monitor delivery timelines, and manage shipments in one place.');
+  $robots = (string)($meta['robots'] ?? 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1');
   $url = (string)($meta['url'] ?? '/');
   $type = (string)($meta['type'] ?? 'website');
   $image = (string)($meta['image'] ?? '/assets/branding/parceltracker-logo-1024.png');
@@ -21,6 +22,8 @@
   $user = is_array($auth['user'] ?? null) ? $auth['user'] : null;
   $userName = trim((string)($user['name'] ?? ''));
   $userEmail = trim((string)($user['email'] ?? ''));
+  $userAvatar = trim((string)($user['avatar_url'] ?? ''));
+  $hasAvatar = $userAvatar !== '' && preg_match('#^https?://#i', $userAvatar) === 1;
   $avatarInitial = strtoupper(substr($userName !== '' ? $userName : ($userEmail !== '' ? $userEmail : 'U'), 0, 1));
 
   $page = (string)($page ?? 'home');
@@ -52,7 +55,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title><?= $e($pageTitle) ?></title>
     <meta name="description" content="<?= $e($description) ?>">
-    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta name="robots" content="<?= $e($robots) ?>">
     <meta name="application-name" content="<?= $e($siteName) ?>">
     <meta name="apple-mobile-web-app-title" content="<?= $e($siteName) ?>">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -118,7 +121,11 @@
             </nav>
             <div class="site-actions">
               <div class="avatar" title="<?= $e($userName !== '' ? $userName : $userEmail) ?>">
-                <?= $e($avatarInitial) ?>
+                <?php if ($hasAvatar): ?>
+                  <img class="avatar__img" src="<?= $e($userAvatar) ?>" alt="<?= $e($userName !== '' ? $userName : 'Account avatar') ?>">
+                <?php else: ?>
+                  <?= $e($avatarInitial) ?>
+                <?php endif; ?>
               </div>
               <form method="post" action="/logout" class="logout-form">
                 <input type="hidden" name="csrf" value="<?= $e((string)($csrf ?? '')) ?>">
