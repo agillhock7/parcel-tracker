@@ -8,21 +8,51 @@ if [[ ! -d public ]]; then
   exit 1
 fi
 
-# Adjust these candidates if your subdomain DocumentRoot differs.
-candidate1="/home/ajgill/tb4"
-candidate2="/home/ajgill/public_html/tb4"
+home_dir="${HOME:-/home/ajgill}"
+subdomain="tb4"
+root_domain="alexander.quest"
 
-DEPLOYPATH=""
-if [[ -d "$candidate1" ]]; then
-  DEPLOYPATH="$candidate1"
-elif [[ -d "$candidate2" ]]; then
-  DEPLOYPATH="$candidate2"
-else
-  echo "[deploy] ERROR: deploy path not found."
-  echo "[deploy] Expected one of:"
-  echo "[deploy]   $candidate1"
-  echo "[deploy]   $candidate2"
-  exit 1
+DEPLOYPATH="${DEPLOYPATH:-}"
+
+if [[ -z "$DEPLOYPATH" ]]; then
+  # Common cPanel patterns. Prefer exact matches before globs.
+  candidates=(
+    "$home_dir/$subdomain"
+    "$home_dir/public_html/$subdomain"
+    "$home_dir/$subdomain.$root_domain"
+    "$home_dir/public_html/$subdomain.$root_domain"
+  )
+
+  for p in "${candidates[@]}"; do
+    if [[ -d "$p" ]]; then
+      DEPLOYPATH="$p"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$DEPLOYPATH" ]]; then
+  matches=()
+  for p in "$home_dir/${subdomain}"* "$home_dir/public_html/${subdomain}"*; do
+    [[ -d "$p" ]] && matches+=("$p")
+  done
+
+  if [[ ${#matches[@]} -eq 1 ]]; then
+    DEPLOYPATH="${matches[0]}"
+  else
+    echo "[deploy] ERROR: deploy path not found."
+    echo "[deploy] Checked common candidates under $home_dir."
+    echo "[deploy] Found these possible matches:"
+    if [[ ${#matches[@]} -eq 0 ]]; then
+      echo "[deploy]   (none)"
+    else
+      for m in "${matches[@]}"; do
+        echo "[deploy]   $m"
+      done
+    fi
+    echo "[deploy] Fix: set the exact DocumentRoot path in this script (DEPLOYPATH candidates) or export DEPLOYPATH in .cpanel.yml."
+    exit 1
+  fi
 fi
 
 echo "[deploy] DEPLOYPATH=$DEPLOYPATH"
@@ -45,4 +75,3 @@ echo "[deploy] ensuring storage/"
 /bin/mkdir -p "$DEPLOYPATH/storage/logs"
 
 echo "[deploy] done"
-
