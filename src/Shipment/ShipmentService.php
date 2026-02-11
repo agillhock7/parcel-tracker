@@ -16,7 +16,38 @@ final class ShipmentService
     public function listShipments(bool $includeArchived = false): array
     {
         $data = $this->db->read();
-        $shipments = array_values($data['shipments'] ?? []);
+        $shipmentsById = $data['shipments'] ?? [];
+        $eventsById = $data['events'] ?? [];
+
+        if (is_array($shipmentsById)) {
+            foreach ($shipmentsById as $id => $s) {
+                if (!is_array($s)) {
+                    continue;
+                }
+
+                $events = $eventsById[$id] ?? [];
+                if (!is_array($events) || $events === []) {
+                    continue;
+                }
+
+                // event_time is stored as YYYY-mm-dd HH:MM:SS, so string compare works.
+                $latest = null;
+                foreach ($events as $ev) {
+                    if (!is_array($ev)) {
+                        continue;
+                    }
+                    if ($latest === null || ((string)($ev['event_time'] ?? '') > (string)($latest['event_time'] ?? ''))) {
+                        $latest = $ev;
+                    }
+                }
+
+                if (is_array($latest)) {
+                    $shipmentsById[$id]['last_location'] = $latest['location'] ?? null;
+                }
+            }
+        }
+
+        $shipments = array_values(is_array($shipmentsById) ? $shipmentsById : []);
 
         $shipments = array_filter($shipments, function (array $s) use ($includeArchived): bool {
             if ($includeArchived) {
@@ -115,6 +146,7 @@ final class ShipmentService
         $now = gmdate('Y-m-d H:i:s');
         $data['shipments'][$shipmentId]['last_event_at'] = $eventTime;
         $data['shipments'][$shipmentId]['updated_at'] = $now;
+        $data['shipments'][$shipmentId]['last_location'] = $location ? trim($location) : null;
         if ($status) {
             $data['shipments'][$shipmentId]['status'] = $status;
         }
@@ -151,4 +183,3 @@ final class ShipmentService
         return $v;
     }
 }
-

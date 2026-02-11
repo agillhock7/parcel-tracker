@@ -10,7 +10,6 @@
 
 <div class="crumbs">
   <a href="/" class="crumbs__link">All shipments</a>
-  <span class="crumbs__sep">/</span>
   <span class="crumbs__current"><?= htmlspecialchars($label !== '' ? $label : $tn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
 </div>
 
@@ -103,4 +102,3 @@
     </div>
   </section>
 </div>
-

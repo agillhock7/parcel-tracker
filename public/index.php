@@ -58,12 +58,28 @@ $shipments = new App\Shipment\ShipmentService($db);
 
 $router = new App\Http\Router();
 $router->get('/', function () use ($tpl, $shipments, $csrf, $flash): void {
-    $items = $shipments->listShipments(false);
+    $all = $shipments->listShipments(true);
+    $upcoming = array_values(array_filter($all, function (array $s): bool {
+        $st = (string)($s['status'] ?? 'unknown');
+        $archived = !empty($s['archived']);
+        return !$archived && $st !== 'delivered';
+    }));
+    $past = array_values(array_filter($all, function (array $s): bool {
+        $st = (string)($s['status'] ?? 'unknown');
+        $archived = !empty($s['archived']);
+        return $archived || $st === 'delivered';
+    }));
+
     $tpl->render('home', [
         'title' => 'Parcel Tracker',
         'csrf' => $csrf->token(),
         'flash' => $flash->consume(),
-        'shipments' => $items,
+        'upcoming' => $upcoming,
+        'past' => $past,
+        'counts' => [
+            'upcoming' => count($upcoming),
+            'past' => count($past),
+        ],
     ]);
 });
 
