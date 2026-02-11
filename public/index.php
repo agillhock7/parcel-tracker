@@ -179,6 +179,7 @@ $oauth = null;
 $passwordResets = null;
 $tracker = null;
 $trackerProviderName = '';
+$trackerConfigHint = 'SHIP24_API_KEY';
 if ($pdo) {
     $users = new App\Auth\UserRepository($pdo);
     $auth = new App\Auth\AuthService($users);
@@ -194,18 +195,26 @@ if ($pdo) {
     $trackingProvider = strtolower(trim((string)getenv('TRACKING_PROVIDER')));
     $ship24Key = trim((string)getenv('SHIP24_API_KEY'));
     $afterShipKey = trim((string)getenv('AFTERSHIP_API_KEY'));
+    $openAiKey = trim((string)getenv('OPENAI_API_KEY'));
     if ($trackingProvider === '') {
         if ($ship24Key !== '') {
             $trackingProvider = 'ship24';
         } elseif ($afterShipKey !== '') {
             $trackingProvider = 'aftership';
+        } elseif ($openAiKey !== '') {
+            $trackingProvider = 'openai';
         }
     }
 
     if ($trackingProvider === 'ship24') {
         $tracker = new App\Tracking\Ship24Client($ship24Key, $logDir);
+        $trackerConfigHint = 'SHIP24_API_KEY';
     } elseif ($trackingProvider === 'aftership') {
         $tracker = new App\Tracking\AfterShipClient($afterShipKey, $logDir);
+        $trackerConfigHint = 'AFTERSHIP_API_KEY';
+    } elseif ($trackingProvider === 'openai') {
+        $tracker = new App\Tracking\OpenAiTrackingClient($openAiKey, $logDir);
+        $trackerConfigHint = 'OPENAI_API_KEY';
     }
 }
 if ($tracker && method_exists($tracker, 'providerName')) {
@@ -610,6 +619,7 @@ $router->get('/shipments/{id}', function (array $params) use (
     $currentUser,
     $tracker,
     $trackerProviderName,
+    $trackerConfigHint,
     $vite
 ): void {
     $userId = requiredUserId($currentUser);
@@ -637,6 +647,7 @@ $router->get('/shipments/{id}', function (array $params) use (
         'defaultTime' => gmdate('Y-m-d\\TH:i'),
         'tracking_live_enabled' => $tracker?->isConfigured() ?? false,
         'tracking_provider' => $trackerProviderName,
+        'tracking_config_hint' => $trackerConfigHint,
         'vite' => $vite,
         'meta' => array_merge($metaBase, [
             'description' => $description,
@@ -646,7 +657,7 @@ $router->get('/shipments/{id}', function (array $params) use (
     ]);
 });
 
-$router->post('/shipments/{id}/sync', function (array $params) use ($shipments, $tracker, $csrf, $flash, $currentUser): void {
+$router->post('/shipments/{id}/sync', function (array $params) use ($shipments, $tracker, $trackerConfigHint, $csrf, $flash, $currentUser): void {
     $csrf->requireValidPost();
     $userId = requiredUserId($currentUser);
     $id = (int)($params['id'] ?? 0);
@@ -655,7 +666,7 @@ $router->post('/shipments/{id}/sync', function (array $params) use ($shipments, 
     }
 
     if (!$tracker || !$tracker->isConfigured()) {
-        $flash->set('err', 'Live tracking is not configured. Add SHIP24_API_KEY in .env.');
+        $flash->set('err', 'Live tracking is not configured. Add ' . $trackerConfigHint . ' in .env.');
         redirectTo('/shipments/' . $id);
     }
 
@@ -679,7 +690,12 @@ $router->post('/shipments/{id}/sync', function (array $params) use ($shipments, 
             isset($sync['carrier']) ? (string)$sync['carrier'] : null
         );
 
-        $flash->set('ok', 'Live tracking synced. ' . $inserted . ' new event(s) imported.');
+        $msg = 'Live tracking synced. ' . $inserted . ' new event(s) imported.';
+        $warn = trim((string)($sync['warning'] ?? ''));
+        if ($warn !== '') {
+            $msg .= ' Note: ' . $warn;
+        }
+        $flash->set('ok', $msg);
         redirectTo('/shipments/' . $id);
     } catch (Throwable $e) {
         $flash->set('err', $e->getMessage());

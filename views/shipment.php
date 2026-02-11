@@ -9,6 +9,7 @@
   $liveEnabled = !empty($tracking_live_enabled);
   $trackingProvider = strtolower(trim((string)($tracking_provider ?? '')));
   $providerLabel = $trackingProvider !== '' ? strtoupper($trackingProvider) : 'tracking API';
+  $trackingConfigHint = trim((string)($tracking_config_hint ?? 'SHIP24_API_KEY'));
 ?>
 
 <section class="detail-head" data-tour="status">
@@ -67,7 +68,7 @@
       <?php if ($liveEnabled): ?>
         <span class="sync-form__hint">Uses live carrier data (<?= htmlspecialchars($providerLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>)</span>
       <?php else: ?>
-        <span class="sync-form__hint sync-form__hint--warn">Set `SHIP24_API_KEY` in `.env` to enable live sync.</span>
+        <span class="sync-form__hint sync-form__hint--warn">Set `<?= htmlspecialchars($trackingConfigHint, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>` in `.env` to enable live sync.</span>
       <?php endif; ?>
     </form>
 
