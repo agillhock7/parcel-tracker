@@ -16,6 +16,25 @@ const AppEnhancer = {
       const nav = q("[data-nav]");
       navBtn?.addEventListener("click", () => nav?.classList.toggle("is-open"));
 
+      const revealEls = qAll("[data-reveal]");
+      if (revealEls.length) {
+        if ("IntersectionObserver" in window) {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add("is-visible");
+                observer.unobserve(entry.target);
+              });
+            },
+            { threshold: 0.18 }
+          );
+          revealEls.forEach((el) => observer.observe(el));
+        } else {
+          revealEls.forEach((el) => el.classList.add("is-visible"));
+        }
+      }
+
       const steps = [];
       if (q('[data-tour="welcome"]')) {
         steps.push(

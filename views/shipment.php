@@ -8,9 +8,11 @@
   $archived = !empty($shipment['archived']);
   $liveEnabled = !empty($tracking_live_enabled);
   $trackingConfigHint = trim((string)($tracking_config_hint ?? 'SHIP24_API_KEY'));
+  $eventCount = count($events);
+  $latestEventTime = $eventCount > 0 ? (string)($events[0]['event_time'] ?? '') : '';
 ?>
 
-<section class="detail-head" data-tour="status">
+<section class="detail-head detail-head--visual" data-tour="status" data-reveal>
   <div>
     <a href="/" class="back-link">Back to dashboard</a>
     <h1 class="detail-head__title"><?= htmlspecialchars($label !== '' ? $label : 'Shipment', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
@@ -22,20 +24,39 @@
   <img src="/assets/graphics/truck.svg" alt="Delivery status graphic" class="detail-head__img">
 </section>
 
+<section class="detail-stats" data-reveal data-reveal-delay="1">
+  <article class="detail-stat">
+    <p class="detail-stat__label">Status</p>
+    <p class="detail-stat__value"><?= htmlspecialchars(str_replace('_', ' ', $st), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+  </article>
+  <article class="detail-stat">
+    <p class="detail-stat__label">Timeline Events</p>
+    <p class="detail-stat__value"><?= $eventCount ?></p>
+  </article>
+  <article class="detail-stat">
+    <p class="detail-stat__label">Latest Update</p>
+    <p class="detail-stat__value"><?= htmlspecialchars($latestEventTime !== '' ? $latestEventTime : 'No updates yet', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+  </article>
+</section>
+
 <?php if (!empty($flash) && is_array($flash)): ?>
-  <div class="msg <?= ($flash['type'] ?? '') === 'err' ? 'msg--err' : 'msg--ok' ?>">
+  <div class="msg <?= ($flash['type'] ?? '') === 'err' ? 'msg--err' : 'msg--ok' ?>" data-reveal data-reveal-delay="1">
     <?= htmlspecialchars((string)($flash['message'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
   </div>
 <?php endif; ?>
 
 <section class="dashboard-grid dashboard-grid--detail">
-  <article class="card card--padded" data-tour="timeline">
+  <article class="card card--padded" data-tour="timeline" data-reveal data-reveal-delay="1">
     <div class="section-hd">
       <h2 class="card__title">Tracking Timeline</h2>
     </div>
 
     <?php if (empty($events)): ?>
-      <p class="muted">No events yet.</p>
+      <div class="empty-state">
+        <img src="/assets/graphics/route-map.svg" alt="" class="empty-state__img" aria-hidden="true">
+        <p class="empty-state__title">No timeline events yet</p>
+        <p class="empty-state__text">Use “Check Tracking with AI” or add a manual event to start the timeline.</p>
+      </div>
     <?php else: ?>
       <ol class="timeline">
         <?php foreach ($events as $ev): ?>
@@ -56,7 +77,7 @@
     <?php endif; ?>
   </article>
 
-  <article class="card card--padded">
+  <article class="card card--padded" data-reveal data-reveal-delay="2">
     <h2 class="card__title">Update Shipment</h2>
     <p class="card__sub">Add a new tracking event and keep delivery status current.</p>
 
