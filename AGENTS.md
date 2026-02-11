@@ -1,54 +1,34 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+This repository targets deployment to **cPanel shared hosting** using **cPanel Git Version Control**. Develop locally, then deploy by pushing commits and triggering a “Deploy HEAD Commit” on the server. Host-specific notes belong in `AGENTS.private.md` (ignored by git).
 
-- `src/`: application source code.
-- `src/routes/`: HTTP route handlers (keep them thin; delegate to services/repositories).
-- `src/repositories/`: data access (DB/files/external APIs). Keep IO here.
-- `views/`: server-rendered templates.
-- `views/partials/`: shared template fragments.
-- `views/projects/`: project-specific pages/templates.
-- `public/`: static assets (CSS, images, client JS).
-- `data/`: local data files used for development (do not store secrets here).
+## Project Structure
 
-If you add new top-level folders, document them here and keep responsibilities non-overlapping.
+This repo is intended to keep only the web entrypoint publicly accessible.
 
-## Build, Test, and Development Commands
+- `public/`: web root (prefer your domain/subdomain DocumentRoot pointing here)
+- `src/`: application code (controllers/services/repositories/models)
+- `views/`: templates (if server-rendered)
+- `storage/`: writable runtime files (logs/cache) and must not be under `public/`
+- `sql/`: schema and migrations (e.g., `sql/migrations/2026_02_10_0001_create_shipments.sql`)
+- `data/`: development-only local data; do not commit real customer/tracking data
 
-This repo currently has no committed build tooling in this workspace. When adding Node tooling, standardize on:
+## Development & Deployment
 
-- `npm run dev`: run locally with file watching.
-- `npm run test`: run the full test suite.
-- `npm run lint`: static checks (fail CI on warnings where possible).
-- `npm run format`: auto-format the codebase.
-- `npm run build`: produce production artifacts (if applicable).
+- Local changes only. Avoid editing code on the server except `.env`, DB/user setup, migrations, and `.htaccess`.
+- Build steps: if the server cannot run builds reliably, build locally and commit the produced assets (for example, `public/assets/`).
 
-Keep scripts in `package.json` as the single source of truth for local/CI commands.
+Recommended command shape (update once tooling exists):
+- `composer install` (PHP deps, if used)
+- `npm ci && npm run build` (asset build, if used)
 
-## Coding Style & Naming Conventions
+## Coding & Security Conventions
 
-- Indentation: 2 spaces for JS/TS/JSON/CSS; no tabs.
-- Files: `kebab-case` for routes/templates (`tracking-status.ts`, `shipment-details.ejs`).
-- Identifiers: `camelCase` for variables/functions, `PascalCase` for types/classes.
-- Prefer small modules with explicit exports; avoid circular dependencies between `routes/` and `repositories/`.
+- Indent with 2 spaces; keep files `kebab-case` and code identifiers `camelCase`/`PascalCase`.
+- Never commit `.env`, API keys, DB credentials, or production data. Keep secrets in environment variables and maintain `.env.example`.
 
-If you introduce formatters/linters (e.g., Prettier/ESLint), run them via `npm run format` / `npm run lint`.
+## Testing & PRs
 
-## Testing Guidelines
-
-- Place tests under `tests/` (or `src/**/__tests__/`), and name them `*.test.*`.
-- Unit tests should mock IO; integration tests may touch `data/` fixtures.
-- Add a short README section describing how to run tests once a framework is chosen (Jest/Vitest/etc.).
-
-## Commit & Pull Request Guidelines
-
-No git history is available in this workspace, so follow this convention until the project establishes one:
-
-- Commits: `type(scope): summary` (e.g., `fix(tracking): handle missing carrier`).
-- PRs: include a clear description, testing notes (`npm run test` output), and screenshots for UI/template changes.
-- Keep PRs focused; link issues when applicable.
-
-## Security & Configuration Tips
-
-- Store secrets in environment variables; commit an `.env.example`, not `.env`.
-- Don’t commit API keys, tokens, or production data into `data/` or `public/`.
+- Add tests under `tests/` or `src/**/__tests__/` and name them `*.test.*`. Mock IO in unit tests.
+- Commits: `feat(scope): ...`, `fix(scope): ...`, `chore(scope): ...`.
+- PRs should include: what changed, how it was tested (commands and results), and screenshots for any UI/template changes.

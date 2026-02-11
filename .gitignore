@@ -32,3 +32,6 @@ tmp/
 # Data (keep fixtures if needed; don't commit real data)
 data/*.sqlite
 data/*.db
+
+# Local-only docs
+AGENTS.private.md
