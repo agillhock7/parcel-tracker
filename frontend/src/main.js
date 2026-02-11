@@ -172,6 +172,67 @@ const AppEnhancer = {
         });
       });
 
+      const transition = document.getElementById("view-transition");
+      const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+      let transitioning = false;
+
+      const runViewTransition = (navigate) => {
+        if (typeof navigate !== "function") return;
+        if (!transition || prefersReducedMotion) {
+          navigate();
+          return;
+        }
+        if (transitioning) return;
+        transitioning = true;
+        transition.setAttribute("aria-hidden", "false");
+        transition.classList.add("is-active");
+        window.setTimeout(() => {
+          navigate();
+        }, 260);
+      };
+
+      document.addEventListener("click", (ev) => {
+        if (ev.defaultPrevented) return;
+        if (ev.button !== 0) return;
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+
+        const target = ev.target;
+        if (!(target instanceof Element)) return;
+        const link = target.closest("a[href]");
+        if (!(link instanceof HTMLAnchorElement)) return;
+        if (link.hasAttribute("data-add-shipment-open")) return;
+        if (link.hasAttribute("download")) return;
+        if (link.target && link.target !== "_self") return;
+
+        const href = link.getAttribute("href");
+        if (!href || href.startsWith("#")) return;
+
+        const url = new URL(link.href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+        if (url.href === window.location.href) return;
+
+        ev.preventDefault();
+        runViewTransition(() => {
+          window.location.assign(url.href);
+        });
+      });
+
+      qAll("form").forEach((form) => {
+        if (form.matches("[data-ai-sync-form]")) return;
+        form.addEventListener("submit", (ev) => {
+          if (ev.defaultPrevented) return;
+          if (form.dataset.noTransition === "1") return;
+
+          const method = (form.getAttribute("method") || "get").toLowerCase();
+          if (method !== "get" && method !== "post") return;
+
+          ev.preventDefault();
+          runViewTransition(() => {
+            form.submit();
+          });
+        });
+      });
+
       const revealEls = qAll("[data-reveal]");
       if (revealEls.length) {
         if ("IntersectionObserver" in window) {

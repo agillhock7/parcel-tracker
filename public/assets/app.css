@@ -1056,6 +1056,65 @@ textarea.in { min-height: 92px; resize: vertical; }
   color: var(--muted);
   font-size: 14px;
 }
+.view-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+.view-transition.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.view-transition__bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(243, 175, 104, 0.2), rgba(11, 18, 30, 0.74) 64%);
+  backdrop-filter: blur(6px);
+}
+.view-transition__card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 430px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(150deg, var(--surface-raised), var(--surface-soft));
+  box-shadow: 0 24px 48px rgba(10, 17, 28, 0.3);
+  padding: 14px;
+  overflow: hidden;
+}
+.view-transition__map {
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0.9;
+}
+.view-transition__truck {
+  position: absolute;
+  left: 12px;
+  bottom: 36px;
+  width: 80px;
+  height: auto;
+  animation: transitionDrive 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 12px rgba(11, 18, 28, 0.3));
+}
+.view-transition__text {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+[data-theme="dark"] .view-transition__bg {
+  background: radial-gradient(circle at 50% 0%, rgba(243, 175, 104, 0.12), rgba(6, 10, 18, 0.84) 64%);
+}
 [data-theme="dark"] .site-top {
   border-bottom-color: rgba(38, 50, 72, 0.88);
   background: rgba(11, 17, 29, 0.86);
@@ -1167,6 +1226,13 @@ textarea.in { min-height: 92px; resize: vertical; }
   50% { transform: translateX(calc(100% - 56px)); }
   100% { transform: translateX(0); }
 }
+@keyframes transitionDrive {
+  0% { transform: translateX(0); }
+  45% { transform: translateX(calc(100% + 14px)); }
+  46% { opacity: 0; transform: translateX(-74px); }
+  48% { opacity: 1; }
+  100% { transform: translateX(0); }
+}
 
 @media (max-width: 980px) {
   .dashboard-grid,
@@ -1267,6 +1333,14 @@ textarea.in { min-height: 92px; resize: vertical; }
     max-height: calc(100vh - 24px);
     overflow: auto;
     border-radius: 16px;
+  }
+  .view-transition__card {
+    width: calc(100vw - 24px);
+    border-radius: 14px;
+  }
+  .view-transition__truck {
+    width: 68px;
+    bottom: 30px;
   }
 }
 

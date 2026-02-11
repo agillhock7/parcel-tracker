@@ -238,6 +238,15 @@
 
     <div id="vue-enhancer" hidden data-page="<?= $e($page) ?>"></div>
 
+    <div class="view-transition" id="view-transition" aria-hidden="true">
+      <div class="view-transition__bg"></div>
+      <div class="view-transition__card">
+        <img src="/assets/graphics/route-map.svg" alt="" class="view-transition__map">
+        <img src="/assets/graphics/truck.svg" alt="" class="view-transition__truck">
+        <p class="view-transition__text">Routing to your next view...</p>
+      </div>
+    </div>
+
     <div class="pwa-ui" id="pwa-ui" hidden>
       <button type="button" class="pwa-install" id="pwa-install">Install App</button>
     </div>
